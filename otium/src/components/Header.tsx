@@ -17,10 +17,10 @@ async function Header() {
         boxShadow: shadow,
       }}
     >
-      <SidebarTrigger className="absolute left-1 top-1" />
+      <SidebarTrigger className="position:fixed absolute left-3 top-1/2 -translate-y-1/2 " />
 
-      <Link className="flex items-end gap-2" href="/">
-        <Image
+      <Link className="ml-7 flex items-center gap-2 " href="/">
+        <Image 
           src="/favicon.ico"
           height={60}
           width={60}
@@ -30,7 +30,8 @@ async function Header() {
         />
 
         <h1 className="flex flex-col pb-1 text-2xl font-semibold leading-6">
-          Otium <span>AI</span>
+          Otium ✦
+          
         </h1>
       </Link>
 
