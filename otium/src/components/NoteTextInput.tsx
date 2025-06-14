@@ -20,6 +20,8 @@ function NoteTextInput({ noteId, startingNoteText }: Props) {
   useEffect(() => {
     if (noteIdParam === noteId) {
       setNoteText(startingNoteText);
+    } else{
+      setNoteText("");
     }
   }, [startingNoteText, noteIdParam, noteId, setNoteText]);
 
