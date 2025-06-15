@@ -10,9 +10,9 @@ type Props = {
 
 function AskAIButton({ user }: Props) {
   return (
-    <Button size="sm" className="h-8 w-8 rounded-full p-0" title="New Note">
+    <Button size="sm" className="h-8 w-8 rounded-full p-0" title="Ask AI">
       <Sparkles
-        className="h-4 w-4 shrink-0 text-white transition-transform group-hover:rotate-6"
+        className="h-4 w-4 shrink-0 text-white dark:text-black transition-transform group-hover:rotate-6"
         strokeWidth={2}
       />
     </Button>

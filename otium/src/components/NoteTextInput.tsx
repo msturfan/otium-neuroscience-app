@@ -3,7 +3,7 @@
 import { useSearchParams } from "next/navigation";
 import { ChangeEvent, useEffect, useRef } from "react";
 import useNote from "@/hooks/useNote";
-import { updateNoteAction } from "@/actions/notes";
+import { updateNoteAction, createNoteAction } from "@/actions/notes";
 import NewNoteButton from "./NewNoteButton";
 import { User } from "@supabase/supabase-js";
 import { Textarea } from "./ui/textarea";
@@ -66,8 +66,7 @@ function NoteTextInput({ noteId, startingNoteText, user }: Props) {
           />
         </div>
         <div className="flex items-center justify-between rounded-b-2xl bg-transparent px-4 py-3">
-          <div className="flex items-center gap-2">
-          </div>
+          <div className="flex items-center gap-2"></div>
 
           <div className="flex items-center gap-2">
             <AskAIButton user={user} />

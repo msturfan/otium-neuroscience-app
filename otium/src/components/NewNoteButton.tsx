@@ -30,6 +30,7 @@ function NewNoteButton({ user }: Props) {
       setLoading(false);
     }
   };
+  
 
   return (
     <Button
