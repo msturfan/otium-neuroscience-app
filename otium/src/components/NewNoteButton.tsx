@@ -2,7 +2,7 @@
 
 import { User } from "@supabase/supabase-js";
 import { Button } from "./ui/button";
-import { Loader2 } from "lucide-react";
+import { Loader2, Send } from "lucide-react";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { v4 as uuidv4 } from "uuid";
@@ -34,11 +34,16 @@ function NewNoteButton({ user }: Props) {
   return (
     <Button
       onClick={handleClickNewNoteButton}
-      variant="secondary"
-      className="w-24"
+      size="sm"
+      className="h-8 w-8 rounded-full p-0"
       disabled={loading}
+      title="New Note"
     >
-      {loading ? <Loader2 className="animate-spin" /> : "New Note"}
+      {loading ? (
+        <Loader2 className="h-4 w-4 animate-spin" />
+      ) : (
+        <Send className="h-4 w-4" />
+      )}
     </Button>
   );
 }

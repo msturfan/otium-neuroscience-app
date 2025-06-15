@@ -31,12 +31,14 @@ async function HomePage({ searchParams }: Props) {
 
       <div className="relative w-full max-w-4xl">
         <div className="absolute -top-12 right-0 z-10 flex gap-2">
-          <AskAIButton user={user} />
-          <NewNoteButton user={user} />
         </div>
 
         <div className="flex justify-center">
-          <NoteTextInput noteId={noteId} startingNoteText={note?.text || ""} />
+          <NoteTextInput
+            noteId={noteId}
+            startingNoteText={note?.text || ""}
+            user={user}
+          />
         </div>
         <HomeToaster />
       </div>
