@@ -121,7 +121,7 @@ function AuthForm({ type, className, ...props }: Props) {
                   id="email"
                   name="email"
                   type="email"
-                  placeholder="m@example.com"
+                  placeholder="email@example.com"
                   required
                   disabled={isPending}
                 />
