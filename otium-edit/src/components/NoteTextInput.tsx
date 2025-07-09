@@ -9,6 +9,10 @@ import { User } from "@supabase/supabase-js";
 import { Textarea } from "./ui/textarea";
 import AskAIButton from "./AskAIButton";
 import MicrophoneButton from "./MicrophoneButton";
+import { useRouter } from "next/navigation";
+import { v4 as uuidv4 } from "uuid";
+import { toast } from "sonner";
+import { GuestNote } from "@/providers/NoteProvider";
 
 type Props = {
   noteId: string;
@@ -20,16 +24,24 @@ let updateTimeout: NodeJS.Timeout;
 
 function NoteTextInput({ noteId, startingNoteText, user }: Props) {
   const noteIdParam = useSearchParams().get("noteId") || "";
-  const { noteText, setNoteText } = useNote();
+  const { noteText, setNoteText, guestNotes, updateGuestNote, addGuestNote } =
+    useNote();
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const router = useRouter();
 
   useEffect(() => {
     if (noteIdParam === noteId) {
-      setNoteText(startingNoteText);
+      // Check if it's a guest note
+      const guestNote = guestNotes.find((note) => note.id === noteId);
+      if (guestNote) {
+        setNoteText(guestNote.text);
+      } else {
+        setNoteText(startingNoteText);
+      }
     } else {
       setNoteText("");
     }
-  }, [startingNoteText, noteIdParam, noteId, setNoteText]);
+  }, [startingNoteText, noteIdParam, noteId, setNoteText, guestNotes]);
 
   useEffect(() => {
     if (textareaRef.current) {
@@ -44,8 +56,78 @@ function NoteTextInput({ noteId, startingNoteText, user }: Props) {
 
     clearTimeout(updateTimeout);
     updateTimeout = setTimeout(() => {
-      updateNoteAction(noteId, text);
+      // Check if it's a guest note
+      const isGuestNote = guestNotes.some((note) => note.id === noteId);
+
+      if (isGuestNote) {
+        // Update guest note in local state
+        updateGuestNote(noteId, text);
+      } else if (user) {
+        // Update authenticated user note in database
+        updateNoteAction(noteId, text);
+      }
     }, 1500);
+  };
+
+  const handleKeyDown = async (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
+    // Check if Enter is pressed (with cross-browser compatibility)
+    if (e.key === "Enter" || e.keyCode === 13) {
+      // If Shift is held, allow default behavior (new line)
+      if (e.shiftKey) {
+        return; // Let the default behavior happen
+      }
+
+      // Otherwise, prevent default and send the note
+      e.preventDefault();
+      e.stopPropagation();
+
+      // Only proceed if there's some text
+      if (noteText.trim()) {
+        // Save current note immediately
+        clearTimeout(updateTimeout);
+        const isGuestNote = guestNotes.some((note) => note.id === noteId);
+
+        if (isGuestNote) {
+          updateGuestNote(noteId, noteText);
+        } else if (user) {
+          await updateNoteAction(noteId, noteText);
+        }
+
+        // Create new note
+        const uuid = uuidv4();
+
+        if (!user) {
+          // Create guest note
+          const guestNote: GuestNote = {
+            id: uuid,
+            text: "",
+            createdAt: new Date(),
+          };
+          addGuestNote(guestNote);
+          router.push(`/?noteId=${uuid}`);
+
+          // Show notification for guest users
+          toast.info("Please log in or sign up to save your notes", {
+            duration: 5000,
+            action: {
+              label: "Log in",
+              onClick: () => router.push("/login"),
+            },
+          });
+        } else {
+          // Create authenticated user note
+          const result = await createNoteAction(uuid);
+          if (!result.errorMessage) {
+            router.push(`/?noteId=${uuid}&toastType=newNote`);
+          } else {
+            toast.error("Failed to create note");
+          }
+        }
+
+        // Clear the text for the new note
+        setNoteText("");
+      }
+    }
   };
 
   const handleSpeechTranscript = (transcript: string) => {
@@ -53,10 +135,16 @@ function NoteTextInput({ noteId, startingNoteText, user }: Props) {
     const newText = noteText ? `${noteText} ${transcript}` : transcript;
     setNoteText(newText);
 
-    // Update the note in the database
+    // Update the note
     clearTimeout(updateTimeout);
     updateTimeout = setTimeout(() => {
-      updateNoteAction(noteId, newText);
+      const isGuestNote = guestNotes.some((note) => note.id === noteId);
+
+      if (isGuestNote) {
+        updateGuestNote(noteId, newText);
+      } else if (user) {
+        updateNoteAction(noteId, newText);
+      }
     }, 1500);
 
     // Focus the textarea after adding speech text
@@ -75,6 +163,7 @@ function NoteTextInput({ noteId, startingNoteText, user }: Props) {
             ref={textareaRef}
             value={noteText}
             onChange={handleUpdateNote}
+            onKeyDown={handleKeyDown}
             placeholder="Type your notes here.."
             className="custom-scrollbar flex-1 resize-none rounded-t-2xl rounded-b-none border-0 bg-transparent p-4 shadow-none focus:ring-0 focus:outline-none focus-visible:ring-0 focus-visible:outline-none"
             rows={1}

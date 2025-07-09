@@ -37,7 +37,7 @@ export default async function RootLayout({
         >
           <NoteProvider>
             <SidebarProvider>
-              <AppSidebar />
+              <AppSidebar user={user} />
               <SidebarInset>
                 <header className="flex h-14 shrink-0 items-center justify-between">
                   <div className="flex items-center gap-2 px-3">

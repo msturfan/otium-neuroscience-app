@@ -10,6 +10,7 @@ generator client {
 model Note {
   id        String     @id @default(uuid())
   text      String
+  token     String     @unique @default(uuid())
   author    User       @relation(fields: [authorId], references: [id])
   authorId  String
   createdAt DateTime   @default(now())
@@ -17,9 +18,14 @@ model Note {
 }
 
 model User {
-  id    String         @id @default(uuid())
-  email String         @unique
-  notes Note[]
-  createdAt DateTime   @default(now())
-  updatedAt DateTime   @updatedAt @default(now())
+  id                     String    @id @default(uuid())
+  email                  String    @unique
+  firstName              String?
+  lastName               String?
+  profileImage           String?
+  isGuest                Boolean   @default(false)
+  hasCompletedOnboarding Boolean   @default(true)
+  notes                  Note[]
+  createdAt              DateTime  @default(now())
+  updatedAt              DateTime  @updatedAt @default(now())
 }

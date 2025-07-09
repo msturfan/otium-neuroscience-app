@@ -7,8 +7,7 @@
     "build": "next build",
     "start": "next start",
     "lint": "next lint",
-    "migrate": "dotenv -e .env.local -- pnpm prisma generate && dotenv -e .env.local -- pnpm prisma migrate dev"
-  },
+    "migrate": "dotenv -e .env.local -- npx prisma generate && dotenv -e .env.local -- npx prisma migrate dev"  },
   "prisma": {
     "schema": "src/db/schema.prisma"
   },
@@ -26,6 +25,7 @@
     "@supabase/ssr": "^0.6.1",
     "@supabase/supabase-js": "^2.50.0",
     "@tabler/icons-react": "^3.34.0",
+    "@types/uuid": "^10.0.0",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
     "fuse.js": "^7.1.0",
