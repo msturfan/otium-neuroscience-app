@@ -20,6 +20,7 @@ import { NavMain } from "@/components/nav-main";
 import { NavSecondary } from "@/components/nav-secondary";
 import { NavUser } from "@/components/nav-user";
 import { TeamSwitcher } from "@/components/team-switcher";
+import { SearchCommand } from "@/components/SearchCommand";
 import {
   Sidebar,
   SidebarContent,
@@ -67,11 +68,6 @@ const data = {
     },
   ],
   navMain: [
-    {
-      title: "Search",
-      url: "#",
-      icon: Search,
-    },
     {
       title: "Ask AI",
       url: "#",
@@ -122,7 +118,10 @@ export function AppSidebar({
     <Sidebar className="border-r-0" {...props}>
       <SidebarHeader>
         <TeamSwitcher teams={data.teams} />
-        <NavMain items={data.navMain} />
+        <div className="flex flex-col gap-2">
+          <SearchCommand />
+          <NavMain items={data.navMain} />
+        </div>
       </SidebarHeader>
       <SidebarContent>
         <NavNotes user={user} />

@@ -28,7 +28,16 @@ async function HomePage({ searchParams }: Props) {
 
   return (
     <div className="flex h-full flex-col items-center justify-center gap-4 px-4">
-      <img src="/appicon1.ico" alt="App Logo" className="mb-0.5 h-20" />
+      <img 
+        src="/otium_black.png" 
+        alt="App Logo" 
+        className="mb-0.5 h-20 dark:hidden" 
+      />
+      <img 
+        src="/otium_white.png" 
+        alt="App Logo" 
+        className="mb-0.5 h-20 hidden dark:block" 
+      />
 
       <h1 className="text-center text-3xl font-bold text-gray-800 dark:text-gray-200">
         What can I help with?
