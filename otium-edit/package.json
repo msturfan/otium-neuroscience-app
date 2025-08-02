@@ -7,7 +7,8 @@
     "build": "next build",
     "start": "next start",
     "lint": "next lint",
-    "migrate": "dotenv -e .env.local -- npx prisma generate && dotenv -e .env.local -- npx prisma migrate dev"  },
+    "migrate": "dotenv -e .env.local -- npx prisma generate && dotenv -e .env.local -- npx prisma migrate dev"
+  },
   "prisma": {
     "schema": "src/db/schema.prisma"
   },
@@ -28,6 +29,7 @@
     "@types/uuid": "^10.0.0",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
+    "cmdk": "^1.1.1",
     "fuse.js": "^7.1.0",
     "lucide-react": "^0.513.0",
     "next": "15.3.3",
