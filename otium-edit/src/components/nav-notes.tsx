@@ -85,7 +85,7 @@ export function NavNotes({ user }: Props) {
   };
 
   const getNoteTitle = (text: string) => {
-    if (!text.trim()) return "Untitled Note";
+    if (!text.trim()) return "Empty Note";
     // Get first line or first 30 characters
     const firstLine = text.split("\n")[0];
     return firstLine.length > 30
