@@ -193,7 +193,7 @@ export function NavActions({ user }: { user: User | null }) {
       ) : (
         <>
           <Button asChild variant="outline" size="sm">
-            <NextLink href="/login">Sign In</NextLink>
+            <NextLink href="/login">Log In</NextLink>
           </Button>
           <Button asChild size="sm">
             <NextLink href="/sign-up">Sign Up</NextLink>

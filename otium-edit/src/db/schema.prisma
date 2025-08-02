@@ -22,9 +22,7 @@ model User {
   email                  String    @unique
   firstName              String?
   lastName               String?
-  profileImage           String?
   isGuest                Boolean   @default(false)
-  hasCompletedOnboarding Boolean   @default(true)
   notes                  Note[]
   createdAt              DateTime  @default(now())
   updatedAt              DateTime  @updatedAt @default(now())

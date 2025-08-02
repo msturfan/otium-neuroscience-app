@@ -29,12 +29,12 @@ async function HomePage({ searchParams }: Props) {
   return (
     <div className="flex h-full flex-col items-center justify-center gap-4 px-4">
       <img 
-        src="/otium_black.png" 
+        src="/appicon1.ico" 
         alt="App Logo" 
         className="mb-0.5 h-20 dark:hidden" 
       />
       <img 
-        src="/otium_white.png" 
+        src="/appicon1.ico" 
         alt="App Logo" 
         className="mb-0.5 h-20 hidden dark:block" 
       />
