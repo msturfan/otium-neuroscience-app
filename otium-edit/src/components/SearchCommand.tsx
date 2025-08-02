@@ -59,7 +59,7 @@ export function SearchCommand() {
   };
 
   const getNoteTitle = (text: string) => {
-    if (!text.trim()) return "Untitled Note";
+    if (!text.trim()) return "Empty Note";
     const firstLine = text.split("\n")[0];
     return firstLine.length > 50
       ? firstLine.substring(0, 50) + "..."
