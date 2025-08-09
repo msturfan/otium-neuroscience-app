@@ -1,6 +1,7 @@
 import { getUser } from "@/auth/server";
 import HomeToaster from "@/components/HomeToaster";
 import NoteTextInput from "@/components/NoteTextInput";
+import { getServerSideGreeting } from "@/lib/greetings-server";
 import { prisma } from "@/db/prisma";
 
 type Props = {
@@ -12,6 +13,8 @@ type Props = {
 async function HomePage({ searchParams }: Props) {
   const noteIdParam = (await searchParams).noteId;
   const user = await getUser();
+  
+  const greeting = getServerSideGreeting();
 
   const noteId = Array.isArray(noteIdParam)
     ? noteIdParam![0]
@@ -19,7 +22,6 @@ async function HomePage({ searchParams }: Props) {
 
   let note = null;
 
-  // Only fetch from database if user is authenticated
   if (user && noteId) {
     note = await prisma.note.findUnique({
       where: { id: noteId, authorId: user.id },
@@ -40,7 +42,7 @@ async function HomePage({ searchParams }: Props) {
       />
 
       <h1 className="text-center text-3xl font-bold text-gray-800 dark:text-gray-200">
-        What can I help with?
+        {greeting}
       </h1>
 
       <div className="relative w-full max-w-4xl">
