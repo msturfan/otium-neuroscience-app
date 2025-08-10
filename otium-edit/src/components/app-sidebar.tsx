@@ -9,10 +9,8 @@ import {
   Home,
   Inbox,
   MessageCircleQuestion,
-  Search,
   Settings2,
   Sparkles,
-  Trash2,
 } from "lucide-react";
 
 import { NavNotes } from "@/components/nav-notes";
@@ -96,11 +94,6 @@ const data = {
       title: "Settings",
       url: "#",
       icon: Settings2,
-    },
-    {
-      title: "Trash",
-      url: "#",
-      icon: Trash2,
     },
     {
       title: "Help",

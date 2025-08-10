@@ -15,9 +15,6 @@ import {
   LogOut,
   MoreHorizontal,
   Settings2,
-  Star,
-  Trash,
-  Trash2,
 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
@@ -66,10 +63,6 @@ const data = [
       label: "Move to",
       icon: CornerUpRight,
     },
-    {
-      label: "Move to Trash",
-      icon: Trash2,
-    },
   ],
   [
     {
@@ -83,10 +76,6 @@ const data = [
     {
       label: "Version History",
       icon: GalleryVerticalEnd,
-    },
-    {
-      label: "Show delete pages",
-      icon: Trash,
     },
     {
       label: "Notifications",
