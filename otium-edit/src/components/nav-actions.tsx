@@ -5,9 +5,6 @@ import {
   ArrowDown,
   ArrowUp,
   Bell,
-  Copy,
-  CornerUpLeft,
-  CornerUpRight,
   FileText,
   GalleryVerticalEnd,
   LineChart,
@@ -97,6 +94,29 @@ export function NavActions({ user }: { user: User | null }) {
     setIsOpen(false);
   }, []);
 
+  const handleCopyLink = async () => {
+    try {
+      if (typeof navigator !== "undefined" && "clipboard" in navigator) {
+        await navigator.clipboard.writeText(window.location.href);
+      } else {
+        const ta = document.createElement("textarea");
+        ta.value = window.location.href;
+        document.body.appendChild(ta);
+        ta.select();
+        document.execCommand("copy");
+        document.body.removeChild(ta);
+      }
+      toast("Copied link", { description: "Page URL copied to clipboard." });
+    } catch (err) {
+      toast("Couldn't copy link", {
+        description:
+          err instanceof Error ? err.message : "Copy failed. Try again.",
+      });
+    } finally {
+      setIsOpen(false);
+    }
+  };
+
   const handleSignOut = async () => {
     setIsLoggingOut(true);
 
@@ -148,6 +168,8 @@ export function NavActions({ user }: { user: User | null }) {
                                 onClick={
                                   item.label === "Log Out"
                                     ? handleSignOut
+                                    : item.label == "Copy Link"
+                                    ? handleCopyLink
                                     : undefined
                                 }
                                 disabled={
