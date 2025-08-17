@@ -55,20 +55,8 @@ const data = [
       label: "Copy Link",
       icon: Link,
     },
-    {
-      label: "Duplicate",
-      icon: Copy,
-    },
-    {
-      label: "Move to",
-      icon: CornerUpRight,
-    },
   ],
   [
-    {
-      label: "Undo",
-      icon: CornerUpLeft,
-    },
     {
       label: "View analytics",
       icon: LineChart,

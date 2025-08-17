@@ -53,6 +53,8 @@ const data = {
       name: "Otium",
       logo: OtiumLogo,
       plan: "Enterprise",
+      url: "/",
+      isActive: true,
     },
     {
       name: "Coming Soon...",
@@ -87,7 +89,7 @@ const data = {
   navSecondary: [
     {
       title: "Calendar",
-      url: "#",
+      url: "/calendar",
       icon: Calendar,
     },
     {
