@@ -169,8 +169,8 @@ export function NavActions({ user }: { user: User | null }) {
                                   item.label === "Log Out"
                                     ? handleSignOut
                                     : item.label == "Copy Link"
-                                    ? handleCopyLink
-                                    : undefined
+                                      ? handleCopyLink
+                                      : undefined
                                 }
                                 disabled={
                                   item.label === "Log Out" && isLoggingOut

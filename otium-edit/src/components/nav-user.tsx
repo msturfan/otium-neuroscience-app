@@ -7,6 +7,10 @@ import {
   IconNotification,
   IconUserCircle,
 } from "@tabler/icons-react";
+import { useRouter } from "next/navigation";
+import { toast } from "sonner";
+import { logOutAction } from "@/actions/users";
+import * as React from "react";
 
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import {
@@ -35,6 +39,24 @@ export function NavUser({
   };
 }) {
   const { isMobile } = useSidebar();
+  const router = useRouter();
+  const [isLoggingOut, setIsLoggingOut] = React.useState(false);
+
+  const handleSignOut = async () => {
+    setIsLoggingOut(true);
+
+    const { errorMessage } = await logOutAction();
+
+    if (!errorMessage) {
+      router.push(`/?toastType=logOut`);
+    } else {
+      toast("Error", {
+        description: errorMessage,
+      });
+    }
+
+    setIsLoggingOut(false);
+  };
 
   return (
     <SidebarMenu>
@@ -94,9 +116,9 @@ export function NavUser({
               </DropdownMenuItem>
             </DropdownMenuGroup>
             <DropdownMenuSeparator />
-            <DropdownMenuItem>
+            <DropdownMenuItem onClick={handleSignOut} disabled={isLoggingOut}>
               <IconLogout />
-              Log out
+              {isLoggingOut ? "Logging out..." : "Log out"}
             </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
