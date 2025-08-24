@@ -11,6 +11,9 @@ import {
   MessageCircleQuestion,
   Settings2,
   Sparkles,
+  QuoteIcon,
+  ScrollText,
+  Landmark
 } from "lucide-react";
 
 import { NavNotes } from "@/components/nav-notes";
@@ -27,6 +30,7 @@ import {
   SidebarRail,
 } from "@/components/ui/sidebar";
 import { User } from "@supabase/supabase-js";
+import { IconQuoteFilled } from "@tabler/icons-react";
 
 // Custom logo component for Otium
 const OtiumLogo = ({ className }: { className?: string }) => (
@@ -87,6 +91,11 @@ const data = {
     },
   ],
   navSecondary: [
+        {
+      title: "Daily Quote",
+      url: "/quote",
+      icon: Landmark,
+    },
     {
       title: "Calendar",
       url: "/calendar",

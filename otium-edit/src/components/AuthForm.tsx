@@ -186,14 +186,18 @@ function AuthForm({ type, className, ...props }: Props) {
       <div className="text-muted-foreground text-center text-xs text-balance">
         By clicking continue, you agree to our{" "}
         <Link
-          href="#"
+          href="/terms-of-service"
+          target="_blank"
+          rel="noopener noreferrer"
           className="hover:text-primary underline underline-offset-4"
         >
           Terms of Service
         </Link>{" "}
         and{" "}
         <Link
-          href="#"
+          href="/privacy-policy"
+          target="_blank"
+          rel="noopener noreferrer"
           className="hover:text-primary underline underline-offset-4"
         >
           Privacy Policy

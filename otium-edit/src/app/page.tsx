@@ -13,7 +13,6 @@ type Props = {
 async function HomePage({ searchParams }: Props) {
   const noteIdParam = (await searchParams).noteId;
   const user = await getUser();
-  
   const greeting = getServerSideGreeting();
 
   const noteId = Array.isArray(noteIdParam)
@@ -30,15 +29,15 @@ async function HomePage({ searchParams }: Props) {
 
   return (
     <div className="flex h-full flex-col items-center justify-center gap-4 px-4">
-      <img 
-        src="/appicon1.ico" 
-        alt="App Logo" 
-        className="mb-0.5 h-20 dark:hidden" 
+      <img
+        src="/appicon1.ico"
+        alt="App Logo"
+        className="mb-0.5 h-20 dark:hidden"
       />
-      <img 
-        src="/appicon1.ico" 
-        alt="App Logo" 
-        className="mb-0.5 h-20 hidden dark:block" 
+      <img
+        src="/appicon1.ico"
+        alt="App Logo"
+        className="mb-0.5 hidden h-20 dark:block"
       />
 
       <h1 className="text-center text-3xl font-bold text-gray-800 dark:text-gray-200">
