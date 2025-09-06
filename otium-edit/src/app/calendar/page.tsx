@@ -164,11 +164,11 @@ export default function WeeksOfLife(): JSX.Element {
 
           let cellClass: string = "w-2 h-2 m-0.5 rounded-sm transition-all ";
           if (isPast) {
-            cellClass += "bg-gray-800 ";
+            cellClass += "bg-gray-800 dark:bg-gray-300 ";
           } else if (isCurrent) {
-            cellClass += "bg-blue-500 animate-pulse ";
+            cellClass += "bg-blue-500 dark:bg-blue-400 animate-pulse ";
           } else {
-            cellClass += "bg-gray-200 ";
+            cellClass += "bg-gray-200 dark:bg-gray-700 ";
           }
 
           weekCells.push(
@@ -193,14 +193,14 @@ export default function WeeksOfLife(): JSX.Element {
     }
 
     return (
-      <div className="mt-8 rounded-md bg-white p-6 shadow-sm">
-        <h2 className="mb-4 text-lg font-normal text-gray-800">
+      <div className="mt-8 rounded-md bg-white dark:bg-gray-800 p-6 shadow-sm">
+        <h2 className="mb-4 text-lg font-normal text-gray-800 dark:text-gray-200">
           Your life in weeks
         </h2>
         <div className="flex flex-col">{rows}</div>
 
         {showHoverData && hoverWeek !== null && (
-          <div className="mt-4 text-sm text-gray-600">
+          <div className="mt-4 text-sm text-gray-600 dark:text-gray-400">
             Week {hoverWeek + 1}:
             {hoverWeek < stats.weeksLived
               ? " A week from your past"
@@ -212,16 +212,16 @@ export default function WeeksOfLife(): JSX.Element {
 
         <div className="mt-6 flex text-sm">
           <div className="mr-4 flex items-center">
-            <div className="mr-2 h-3 w-3 bg-gray-800"></div>
-            <span className="text-gray-600">Past</span>
+            <div className="mr-2 h-3 w-3 bg-gray-800 dark:bg-gray-300"></div>
+            <span className="text-gray-600 dark:text-gray-400">Past</span>
           </div>
           <div className="mr-4 flex items-center">
-            <div className="mr-2 h-3 w-3 bg-blue-500"></div>
-            <span className="text-gray-600">Present</span>
+            <div className="mr-2 h-3 w-3 bg-blue-500 dark:bg-blue-400"></div>
+            <span className="text-gray-600 dark:text-gray-400">Present</span>
           </div>
           <div className="flex items-center">
-            <div className="mr-2 h-3 w-3 bg-gray-200"></div>
-            <span className="text-gray-600">Future</span>
+            <div className="mr-2 h-3 w-3 bg-gray-200 dark:bg-gray-700"></div>
+            <span className="text-gray-600 dark:text-gray-400">Future</span>
           </div>
         </div>
       </div>
@@ -233,47 +233,47 @@ export default function WeeksOfLife(): JSX.Element {
 
     return (
       <div className="mt-8 space-y-6">
-        <div className="rounded-md bg-white p-6 shadow-sm">
-          <h2 className="mb-4 text-lg font-normal text-gray-800">
+        <div className="rounded-md bg-white dark:bg-gray-800 p-6 shadow-sm">
+          <h2 className="mb-4 text-lg font-normal text-gray-800 dark:text-gray-200">
             Life highlights
           </h2>
           <div className="space-y-4">
-            <p className="text-gray-600">
+            <p className="text-gray-600 dark:text-gray-400">
               You've lived{" "}
-              <span className="font-medium text-gray-900">
+              <span className="font-medium text-gray-900 dark:text-gray-100">
                 {getFormattedNumber(stats.weeksLived)}
               </span>{" "}
               weeks, which is{" "}
-              <span className="font-medium text-gray-900">
+              <span className="font-medium text-gray-900 dark:text-gray-100">
                 {stats.percentageLived}%
               </span>{" "}
               of a full life.
             </p>
-            <p className="text-gray-600">
+            <p className="text-gray-600 dark:text-gray-400">
               That's{" "}
-              <span className="font-medium text-gray-900">
+              <span className="font-medium text-gray-900 dark:text-gray-100">
                 {getFormattedNumber(stats.daysLived)}
               </span>{" "}
               days of experience and approximately{" "}
-              <span className="font-medium text-gray-900">
+              <span className="font-medium text-gray-900 dark:text-gray-100">
                 {getFormattedNumber(stats.seasons)}
               </span>{" "}
               seasons observed.
             </p>
-            <p className="text-gray-600">
+            <p className="text-gray-600 dark:text-gray-400">
               Your heart has beaten approximately{" "}
-              <span className="font-medium text-gray-900">
+              <span className="font-medium text-gray-900 dark:text-gray-100">
                 {getFormattedNumber(stats.heartbeats)}
               </span>{" "}
               times.
             </p>
-            <p className="text-gray-600">
+            <p className="text-gray-600 dark:text-gray-400">
               You've taken around{" "}
-              <span className="font-medium text-gray-900">
+              <span className="font-medium text-gray-900 dark:text-gray-100">
                 {getFormattedNumber(stats.breaths)}
               </span>{" "}
               breaths and slept about{" "}
-              <span className="font-medium text-gray-900">
+              <span className="font-medium text-gray-900 dark:text-gray-100">
                 {getFormattedNumber(stats.hoursSlept)}
               </span>{" "}
               hours.
@@ -281,44 +281,44 @@ export default function WeeksOfLife(): JSX.Element {
           </div>
         </div>
 
-        <div className="rounded-md bg-white p-6 shadow-sm">
-          <h2 className="mb-4 text-lg font-normal text-gray-800">
+        <div className="rounded-md bg-white dark:bg-gray-800 p-6 shadow-sm">
+          <h2 className="mb-4 text-lg font-normal text-gray-800 dark:text-gray-200">
             Societal context
           </h2>
           <div className="space-y-4">
-            <p className="text-gray-600">
+            <p className="text-gray-600 dark:text-gray-400">
               During your lifetime, humanity's population has grown from{" "}
               {stats.birthYear ? (
-                <span className="font-medium text-gray-900">
+                <span className="font-medium text-gray-900 dark:text-gray-100">
                   {getFormattedNumber(getPopulationAtYear(stats.birthYear))}
                 </span>
               ) : (
                 ""
               )}{" "}
-              to over <span className="font-medium text-gray-900">8</span>{" "}
+              to over <span className="font-medium text-gray-900 dark:text-gray-100">8</span>{" "}
               billion people.
             </p>
-            <p className="text-gray-600">
+            <p className="text-gray-600 dark:text-gray-400">
               The average person will meet around{" "}
-              <span className="font-medium text-gray-900">80,000</span> people
+              <span className="font-medium text-gray-900 dark:text-gray-100">80,000</span> people
               in their lifetime. You've likely already met approximately{" "}
-              <span className="font-medium text-gray-900">
+              <span className="font-medium text-gray-900 dark:text-gray-100">
                 {getFormattedNumber(
                   Math.round(80000 * (stats.percentageLived / 100)),
                 )}
               </span>{" "}
               individuals.
             </p>
-            <p className="text-gray-600">
+            <p className="text-gray-600 dark:text-gray-400">
               Since your birth, humanity has collectively experienced
               approximately{" "}
-              <span className="font-medium text-gray-900">
+              <span className="font-medium text-gray-900 dark:text-gray-100">
                 {getFormattedNumber(
                   Math.round(stats.daysLived * getAverageBirthsPerDay()),
                 )}
               </span>{" "}
               births and{" "}
-              <span className="font-medium text-gray-900">
+              <span className="font-medium text-gray-900 dark:text-gray-100">
                 {getFormattedNumber(
                   Math.round(stats.daysLived * getAverageDeathsPerDay()),
                 )}
@@ -328,34 +328,34 @@ export default function WeeksOfLife(): JSX.Element {
           </div>
         </div>
 
-        <div className="rounded-md bg-white p-6 shadow-sm">
-          <h2 className="mb-4 text-lg font-normal text-gray-800">
+        <div className="rounded-md bg-white dark:bg-gray-800 p-6 shadow-sm">
+          <h2 className="mb-4 text-lg font-normal text-gray-800 dark:text-gray-200">
             Cosmic perspective
           </h2>
           <div className="space-y-4">
-            <p className="text-gray-600">
+            <p className="text-gray-600 dark:text-gray-400">
               Since your birth, Earth has traveled approximately{" "}
-              <span className="font-medium text-gray-900">
+              <span className="font-medium text-gray-900 dark:text-gray-100">
                 {getFormattedNumber(
                   Math.round(stats.daysLived * 1.6 * 1000000),
                 )}
               </span>{" "}
               kilometers through space around the Sun.
             </p>
-            <p className="text-gray-600">
+            <p className="text-gray-600 dark:text-gray-400">
               The observable universe is about{" "}
-              <span className="font-medium text-gray-900">93</span> billion
+              <span className="font-medium text-gray-900 dark:text-gray-100">93</span> billion
               light-years across, meaning light takes{" "}
-              <span className="font-medium text-gray-900">93</span> billion
+              <span className="font-medium text-gray-900 dark:text-gray-100">93</span> billion
               years to cross it. Your entire lifespan is just{" "}
-              <span className="font-medium text-gray-900">
+              <span className="font-medium text-gray-900 dark:text-gray-100">
                 {((80 / 13800000000) * 100).toFixed(10)}%
               </span>{" "}
               of the universe's age.
             </p>
-            <p className="text-gray-600">
+            <p className="text-gray-600 dark:text-gray-400">
               During your lifetime, our solar system has moved about{" "}
-              <span className="font-medium text-gray-900">
+              <span className="font-medium text-gray-900 dark:text-gray-100">
                 {getFormattedNumber(Math.round(stats.daysLived * 24 * 828000))}
               </span>{" "}
               kilometers through the Milky Way galaxy.
@@ -363,31 +363,31 @@ export default function WeeksOfLife(): JSX.Element {
           </div>
         </div>
 
-        <div className="rounded-md bg-white p-6 shadow-sm">
-          <h2 className="mb-4 text-lg font-normal text-gray-800">
+        <div className="rounded-md bg-white dark:bg-gray-800 p-6 shadow-sm">
+          <h2 className="mb-4 text-lg font-normal text-gray-800 dark:text-gray-200">
             Natural world
           </h2>
           <div className="space-y-4">
-            <p className="text-gray-600">
+            <p className="text-gray-600 dark:text-gray-400">
               You've experienced approximately{" "}
-              <span className="font-medium text-gray-900">
+              <span className="font-medium text-gray-900 dark:text-gray-100">
                 {getFormattedNumber(Math.round(stats.daysLived / 29.53))}
               </span>{" "}
               lunar cycles and{" "}
-              <span className="font-medium text-gray-900">
+              <span className="font-medium text-gray-900 dark:text-gray-100">
                 {stats.yearsLived}
               </span>{" "}
               trips around the Sun.
             </p>
-            <p className="text-gray-600">
+            <p className="text-gray-600 dark:text-gray-400">
               A giant sequoia tree can live over 3,000 years. Your current age
               is{" "}
-              <span className="font-medium text-gray-900">
+              <span className="font-medium text-gray-900 dark:text-gray-100">
                 {((stats.yearsLived / 3000) * 100).toFixed(2)}%
               </span>{" "}
               of its potential lifespan.
             </p>
-            <p className="text-gray-600">
+            <p className="text-gray-600 dark:text-gray-400">
               During your lifetime, your body has replaced most of its cells
               several times. You are not made of the same atoms you were born
               with.
@@ -405,24 +405,24 @@ export default function WeeksOfLife(): JSX.Element {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50 p-6 pt-16">
+    <div className="min-h-screen bg-gray-50 dark:bg-gray-900 p-6 pt-16">
       <div className="mx-auto max-w-md">
-        <h1 className="mb-2 text-2xl font-normal text-gray-800">
+        <h1 className="mb-2 text-2xl font-normal text-gray-800 dark:text-gray-200">
           Life in weeks
         </h1>
-        <p className="mb-8 text-gray-600">
+        <p className="mb-8 text-gray-600 dark:text-gray-400">
           A simple visualization to reflect on the passage of time
         </p>
 
         {step === 1 ? (
-          <div className="rounded-md bg-white p-6 shadow-sm">
-            <h2 className="mb-4 text-lg font-normal text-gray-800">
+          <div className="rounded-md bg-white dark:bg-gray-800 p-6 shadow-sm">
+            <h2 className="mb-4 text-lg font-normal text-gray-800 dark:text-gray-200">
               Enter a birthdate
             </h2>
             <div>
               <input
                 type="date"
-                className="mb-4 w-full rounded-md border border-gray-300 p-2 text-gray-800"
+                className="mb-4 w-full rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 p-2 text-gray-800 dark:text-gray-200"
                 value={birthdate}
                 onChange={(e: ChangeEvent<HTMLInputElement>) =>
                   setBirthdate(e.target.value)
@@ -433,7 +433,7 @@ export default function WeeksOfLife(): JSX.Element {
               />
               <button
                 onClick={handleSubmit}
-                className="w-full rounded-md bg-gray-800 py-2 text-white transition-colors hover:bg-gray-700"
+                className="w-full rounded-md bg-gray-800 dark:bg-gray-200 py-2 text-white dark:text-gray-800 transition-colors hover:bg-gray-700 dark:hover:bg-gray-300"
                 disabled={!birthdate}
               >
                 Visualize your time
@@ -446,7 +446,7 @@ export default function WeeksOfLife(): JSX.Element {
             {renderStats()}
             <button
               onClick={handleReset}
-              className="mt-8 w-full rounded-md bg-gray-200 py-2 text-gray-800 transition-colors hover:bg-gray-300"
+              className="mt-8 w-full rounded-md bg-gray-200 dark:bg-gray-700 py-2 text-gray-800 dark:text-gray-200 transition-colors hover:bg-gray-300 dark:hover:bg-gray-600"
             >
               Start over
             </button>

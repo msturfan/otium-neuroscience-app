@@ -6,7 +6,8 @@ import {
   AudioWaveform,
   Calendar,
   Command,
-  Home,
+  Notebook,
+  Edit,
   Inbox,
   MessageCircleQuestion,
   Settings2,
@@ -78,9 +79,9 @@ const data = {
       icon: Sparkles,
     },
     {
-      title: "Home",
+      title: "New note",
       url: "/",
-      icon: Home,
+      icon: Edit,
       isActive: true,
     },
     {
