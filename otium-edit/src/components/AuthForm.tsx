@@ -46,7 +46,6 @@ function AuthForm({ type, className, ...props }: Props) {
     });
   };
 
-  // Placeholder functions for social login - you'll need to implement these
   const handleAppleLogin = () => {
     // TODO: Implement Apple login
     toast("Coming Soon", {
@@ -138,7 +137,7 @@ function AuthForm({ type, className, ...props }: Props) {
                   <Label htmlFor="password">Password</Label>
                   {isLoginForm && (
                     <Link
-                      href="#"
+                      href="/forgot-password"
                       className={`ml-auto text-sm underline-offset-4 hover:underline ${
                         isPending ? "pointer-events-none opacity-50" : ""
                       }`}
