@@ -1,6 +1,6 @@
 "use client";
 
-import { ClipboardCopy, Pencil } from "lucide-react";
+import { ClipboardCopy, Pencil, Copy } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   Tooltip,
@@ -52,10 +52,10 @@ export default function MessageBubble({
                 aria-label="Copy"
                 onClick={() => onCopy?.(text)}
               >
-                <ClipboardCopy className="h-3.5 w-3.5" />
+                <Copy className="h-3.5 w-3.5" />
               </Button>
             </TooltipTrigger>
-            <TooltipContent>Copy</TooltipContent>
+            <TooltipContent side="bottom">Copy</TooltipContent>
           </Tooltip>
 
           <Tooltip>
@@ -70,7 +70,7 @@ export default function MessageBubble({
                 <Pencil className="h-3.5 w-3.5" />
               </Button>
             </TooltipTrigger>
-            <TooltipContent>Edit</TooltipContent>
+            <TooltipContent side="bottom">Edit</TooltipContent>
           </Tooltip>
         </div>
       </div>
