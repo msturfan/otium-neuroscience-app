@@ -22,6 +22,7 @@ import { useState, useTransition } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { toast } from "sonner";
 import { deleteNoteAction } from "@/actions/notes";
+import React from "react";
 
 type Props = {
   noteId: string;
@@ -40,6 +41,9 @@ function NoteActions({
   const noteIdParam = useSearchParams().get("noteId") || "";
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [isPending, startTransition] = useTransition();
+
+  const deleteRef = React.useRef<HTMLButtonElement>(null);
+  const cancelRef = React.useRef<HTMLButtonElement>(null);
 
   const handleDeleteNote = () => {
     if (isGuest && onGuestDelete) {
@@ -133,7 +137,12 @@ function NoteActions({
       </DropdownMenu>
 
       <Dialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
-        <DialogContent>
+        <DialogContent
+          onOpenAutoFocus={(e) => {
+            e.preventDefault();
+            (isPending ? cancelRef : deleteRef).current?.focus();
+          }}
+        >
           <DialogHeader>
             <DialogTitle>
               Are you sure you want to delete this note?
@@ -143,11 +152,16 @@ function NoteActions({
               note from our servers.
             </DialogDescription>
           </DialogHeader>
+
           <DialogFooter>
             <DialogClose asChild>
-              <Button variant="outline">Cancel</Button>
+              <Button ref={cancelRef} variant="outline">
+                Cancel
+              </Button>
             </DialogClose>
+
             <Button
+              ref={deleteRef}
               onClick={() => {
                 handleDeleteNote();
                 setIsDeleteDialogOpen(false);
