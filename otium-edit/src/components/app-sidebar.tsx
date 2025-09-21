@@ -86,7 +86,7 @@ const data = {
     },
     {
       title: "Inbox",
-      url: "#",
+      url: "/inbox",
       icon: Inbox,
       badge: "10",
     },
