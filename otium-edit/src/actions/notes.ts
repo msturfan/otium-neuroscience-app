@@ -4,40 +4,44 @@ import { getUser } from "@/auth/server";
 import { prisma } from "@/db/prisma";
 import { handleError } from "@/lib/utils";
 
-export const createNoteAction = async (noteId: string) => {
-  try {
-    const user = await getUser();
-    if (!user) throw new Error("You must be logged in to create a note");
+export async function createNoteAction(id?: string) {
+  const user = await getUser();
+  if (!user) return { errorMessage: "Not signed in" };
 
-    const note = await prisma.note.create({
-      data: {
-        id: noteId,
-        authorId: user.id,
-        text: "",
-      },
+  const noteId = id ?? crypto.randomUUID();
+
+  try {
+    await prisma.note.create({
+      data: { id: noteId, authorId: user.id, text: "" },
     });
-
-    return { errorMessage: null };
-  } catch (error) {
-    return handleError(error);
+    return { id: noteId };
+  } catch (e) {
+    // If it already exists, treat as success
+    return { id: noteId };
   }
-};
+}
 
-export const updateNoteAction = async (noteId: string, text: string) => {
+// Idempotent: update text; if the note doesn't exist yet, create it with that text.
+export async function updateNoteAction(id: string, text: string) {
+  const user = await getUser();
+  if (!user) return { errorMessage: "Not signed in" };
+
   try {
-    const user = await getUser();
-    if (!user) throw new Error("You must be logged in to update a note");
-
-    await prisma.note.update({
-      where: { id: noteId, authorId: user.id },
+    const result = await prisma.note.updateMany({
+      where: { id, authorId: user.id },
       data: { text },
     });
 
-    return { errorMessage: null };
-  } catch (error) {
-    return handleError(error);
+    if (result.count === 0) {
+      await prisma.note.create({
+        data: { id, authorId: user.id, text },
+      });
+    }
+    return { id };
+  } catch (e) {
+    return { errorMessage: "DB error" };
   }
-};
+}
 
 export const deleteNoteAction = async (noteId: string) => {
   try {
