@@ -18,57 +18,32 @@ import {
 
 type Props = {
   user: User | null;
+  onSend?: () => Promise<void> | void;
+  disabled?: boolean;
+  label?: string;
 };
 
-function NewNoteButton({ user }: Props) {
-  const router = useRouter();
-  const { addGuestNote } = useNote();
-
+export default function NewNoteButton({ onSend, disabled, label }: Props) {
   const [loading, setLoading] = useState(false);
 
-  const handleClickNewNoteButton = async () => {
+  const handleClick = async () => {
+    if (disabled || loading) return;
     setLoading(true);
-    const uuid = uuidv4();
-
-    if (!user) {
-      // Create guest note
-      const guestNote: GuestNote = {
-        id: uuid,
-        text: "",
-        createdAt: new Date(),
-      };
-      addGuestNote(guestNote);
-      router.push(`/?noteId=${uuid}`);
-
-      // Show notification for guest users
-      toast.info("Please log in or sign up to save your notes", {
-        duration: 5000,
-        action: {
-          label: "Log in",
-          onClick: () => router.push("/login"),
-        },
-      });
-    } else {
-      // Create authenticated user note
-      const result = await createNoteAction(uuid);
-      if (!result.errorMessage) {
-        router.push(`/?noteId=${uuid}&toastType=newNote`);
-      } else {
-        toast.error("Failed to create note");
-      }
+    try {
+      await onSend?.();
+    } finally {
+      setLoading(false);
     }
-
-    setLoading(false);
   };
 
   return (
     <Tooltip>
       <TooltipTrigger asChild>
         <Button
-          onClick={handleClickNewNoteButton}
+          disabled={loading || disabled}
+          onClick={handleClick}
           size="sm"
           className="h-8 w-8 rounded-full p-0"
-          disabled={loading}
         >
           {loading ? (
             <Loader2 className="h-4 w-4 animate-spin" />
@@ -86,5 +61,3 @@ function NewNoteButton({ user }: Props) {
     </Tooltip>
   );
 }
-
-export default NewNoteButton;
