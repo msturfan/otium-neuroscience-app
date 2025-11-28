@@ -5,12 +5,13 @@ import { useRouter } from "next/navigation";
 import { CardContent, CardDescription, CardHeader, CardTitle } from "./ui/card";
 import { Label } from "./ui/label";
 import { Input } from "./ui/input";
-import { useTransition } from "react";
+import { useTransition, useState } from "react";
 import { Button } from "./ui/button";
 import { Loader2 } from "lucide-react";
 import Link from "next/link";
 import { loginAction, signUpAction } from "@/actions/users";
 import { cn } from "@/lib/utils";
+import PasswordStrengthIndicator from "./PasswordStrengthIndicator";
 
 type Props = {
   type: "login" | "signUp";
@@ -23,24 +24,71 @@ function AuthForm({ type, className, ...props }: Props) {
   const router = useRouter();
 
   const [isPending, startTransition] = useTransition();
+  const [password, setPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
 
   const handleSubmit = (formData: FormData) => {
     startTransition(async () => {
-      const email = formData.get("email") as string;
-      const password = formData.get("password") as string;
+      try {
+        const email = formData.get("email") as string;
+        const passwordValue = formData.get("password") as string;
 
-      let errorMessage;
-      if (isLoginForm) {
-        errorMessage = (await loginAction(email, password)).errorMessage;
-      } else {
-        errorMessage = (await signUpAction(email, password)).errorMessage;
-      }
+        if (!isLoginForm) {
+          const firstName = formData.get("firstName") as string;
+          const lastName = formData.get("lastName") as string;
+          const confirmPasswordValue = formData.get(
+            "confirmPassword",
+          ) as string;
 
-      if (!errorMessage) {
-        router.replace(`/?toastType=${type}`);
-      } else {
+          if (passwordValue !== confirmPasswordValue) {
+            toast("Error", {
+              description: "Passwords do not match",
+            });
+            return;
+          }
+
+          const result = await signUpAction(
+            email,
+            passwordValue,
+            firstName,
+            lastName,
+          );
+
+          if (!result?.errorMessage) {
+            // Check if email verification is required
+            if (result?.requiresEmailVerification) {
+              toast("Check your email", {
+                description:
+                  "We've sent you a verification link. Please check your email and click the link to verify your account before logging in.",
+                duration: 10000,
+              });
+              // Don't redirect - let user see the message
+            } else {
+              router.replace(`/?toastType=${type}`);
+            }
+          } else {
+            toast("Error", {
+              description: result.errorMessage,
+            });
+          }
+        } else {
+          const result = await loginAction(email, passwordValue);
+
+          if (!result?.errorMessage) {
+            router.replace(`/?toastType=${type}`);
+          } else {
+            toast("Error", {
+              description: result.errorMessage,
+            });
+          }
+        }
+      } catch (error) {
+        console.error("Form submission error:", error);
         toast("Error", {
-          description: errorMessage,
+          description:
+            error instanceof Error
+              ? error.message
+              : "An unexpected error occurred. Please try again.",
         });
       }
     });
@@ -121,6 +169,32 @@ function AuthForm({ type, className, ...props }: Props) {
 
           <form action={handleSubmit}>
             <div className="grid gap-6">
+              {!isLoginForm && (
+                <>
+                  <div className="grid gap-3">
+                    <Label htmlFor="firstName">First Name</Label>
+                    <Input
+                      id="firstName"
+                      name="firstName"
+                      type="text"
+                      placeholder="John"
+                      required
+                      disabled={isPending}
+                    />
+                  </div>
+                  <div className="grid gap-3">
+                    <Label htmlFor="lastName">Last Name</Label>
+                    <Input
+                      id="lastName"
+                      name="lastName"
+                      type="text"
+                      placeholder="Doe"
+                      required
+                      disabled={isPending}
+                    />
+                  </div>
+                </>
+              )}
               <div className="grid gap-3">
                 <Label htmlFor="email">Email</Label>
                 <Input
@@ -152,8 +226,32 @@ function AuthForm({ type, className, ...props }: Props) {
                   type="password"
                   required
                   disabled={isPending}
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
                 />
+                {!isLoginForm && (
+                  <PasswordStrengthIndicator password={password} />
+                )}
               </div>
+              {!isLoginForm && (
+                <div className="grid gap-3">
+                  <Label htmlFor="confirmPassword">Confirm Password</Label>
+                  <Input
+                    id="confirmPassword"
+                    name="confirmPassword"
+                    type="password"
+                    required
+                    disabled={isPending}
+                    value={confirmPassword}
+                    onChange={(e) => setConfirmPassword(e.target.value)}
+                  />
+                  {confirmPassword && password !== confirmPassword && (
+                    <p className="text-destructive text-xs">
+                      Passwords do not match
+                    </p>
+                  )}
+                </div>
+              )}
               <Button type="submit" className="w-full" disabled={isPending}>
                 {isPending ? (
                   <Loader2 className="mr-2 h-4 w-4 animate-spin" />

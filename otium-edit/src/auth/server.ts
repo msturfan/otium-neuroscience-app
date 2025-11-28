@@ -27,14 +27,33 @@ export async function createClient() {
 }
 
 export async function getUser() {
-  const { auth } = await createClient();
+  try {
+    const { auth } = await createClient();
 
-  const userObject = await auth.getUser();
+    const userObject = await auth.getUser();
 
-  if (userObject.error) {
-    console.error(userObject.error);
+    if (userObject.error) {
+      // Don't log AuthSessionMissingError as it's expected for unauthenticated users
+      if (userObject.error.name !== "AuthSessionMissingError") {
+        console.error(userObject.error);
+      }
+      return null;
+    }
+
+    return userObject.data.user;
+  } catch (error) {
+    // Handle any thrown errors (like AuthSessionMissingError)
+    // This is expected for pages like sign-up/login where there's no session
+    if (
+      error &&
+      typeof error === "object" &&
+      "name" in error &&
+      error.name === "AuthSessionMissingError"
+    ) {
+      return null;
+    }
+    // Log other unexpected errors
+    console.error("Unexpected error in getUser:", error);
     return null;
   }
-
-  return userObject.data.user;
 }

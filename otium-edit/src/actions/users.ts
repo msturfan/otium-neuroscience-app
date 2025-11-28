@@ -8,18 +8,31 @@ export const loginAction = async (email: string, password: string) => {
   try {
     const { auth } = await createClient();
 
-    const { error } = await auth.signInWithPassword({
+    const { data, error } = await auth.signInWithPassword({
       email,
       password,
     });
     if (error) throw error;
 
-    return { errorMessage: null };
+    // Check if email is verified
+    const emailConfirmed = data.user?.email_confirmed_at !== null;
+
+    if (!emailConfirmed) {
+      // Sign out the user if email is not verified
+      await auth.signOut();
+      return {
+        errorMessage:
+          "Please verify your email before logging in. Check your inbox for the verification link.",
+        requiresEmailVerification: false,
+      };
+    }
+
+    return { errorMessage: null, requiresEmailVerification: false };
   } catch (error) {
-    return handleError(error);
+    return { ...handleError(error), requiresEmailVerification: false };
   }
 };
-  
+
 export const logOutAction = async () => {
   try {
     const { auth } = await createClient();
@@ -33,28 +46,52 @@ export const logOutAction = async () => {
   }
 };
 
-export const signUpAction = async (email: string, password: string) => {
+export const signUpAction = async (
+  email: string,
+  password: string,
+  firstName?: string,
+  lastName?: string,
+) => {
   try {
     const { auth } = await createClient();
 
     const { data, error } = await auth.signUp({
       email,
       password,
+      options: {
+        emailRedirectTo: `${process.env.NEXT_PUBLIC_SITE_URL || "http://localhost:3000"}/auth/callback`,
+      },
     });
     if (error) throw error;
 
     const userId = data.user?.id;
     if (!userId) throw new Error("Error signing up");
 
-    await prisma.user.create({
-      data: {
+    // Check if email confirmation is required
+    const emailConfirmed = data.user?.email_confirmed_at !== null;
+
+    // Use upsert to handle case where user might already exist
+    await prisma.user.upsert({
+      where: { id: userId },
+      update: {
+        email,
+        firstName: firstName || null,
+        lastName: lastName || null,
+      },
+      create: {
         id: userId,
         email,
+        firstName: firstName || null,
+        lastName: lastName || null,
       },
     });
 
-    return { errorMessage: null };
+    // Return success with email verification status
+    return {
+      errorMessage: null,
+      requiresEmailVerification: !emailConfirmed,
+    };
   } catch (error) {
-    return handleError(error);
+    return { ...handleError(error), requiresEmailVerification: false };
   }
 };
