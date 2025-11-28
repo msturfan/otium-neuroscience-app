@@ -8,13 +8,15 @@ import {
   SidebarTrigger,
 } from "@/components/ui/sidebar";
 import { getUser } from "@/auth/server";
+import { getUserProfile } from "@/lib/user-utils";
 
 export default async function Page() {
   const user = await getUser();
+  const userProfile = await getUserProfile(user);
 
   return (
     <SidebarProvider>
-      <AppSidebar user={user} />
+      <AppSidebar user={user} userProfile={userProfile} />
       <SidebarInset>
         <header className="flex h-14 shrink-0 items-center justify-between">
           <div className="flex items-center gap-2 px-3">

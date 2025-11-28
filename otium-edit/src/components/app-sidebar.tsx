@@ -14,7 +14,7 @@ import {
   Sparkles,
   QuoteIcon,
   ScrollText,
-  Landmark
+  Landmark,
 } from "lucide-react";
 
 import { NavNotes } from "@/components/nav-notes";
@@ -46,13 +46,15 @@ const OtiumLogo = ({ className }: { className?: string }) => (
   </div>
 );
 
+type UserProfile = {
+  name: string;
+  email: string;
+  avatar: string;
+  initials: string;
+} | null;
+
 // This is sample data.
 const data = {
-  user: {
-    name: "John Doe",
-    email: "john.doe@example.com",
-    avatar: "https://github.com/shadcn.png",
-  },
   teams: [
     {
       name: "Otium",
@@ -92,7 +94,7 @@ const data = {
     },
   ],
   navSecondary: [
-        {
+    {
       title: "Daily Quote",
       url: "/quote",
       icon: Landmark,
@@ -117,8 +119,21 @@ const data = {
 
 export function AppSidebar({
   user,
+  userProfile,
   ...props
-}: React.ComponentProps<typeof Sidebar> & { user: User | null }) {
+}: React.ComponentProps<typeof Sidebar> & {
+  user: User | null;
+  userProfile: UserProfile;
+}) {
+  // Use real user profile if available, otherwise use fallback
+  const displayUser = userProfile || {
+    name: user?.email || "Guest",
+    email: user?.email || "",
+    avatar:
+      "https://ui-avatars.com/api/?name=Guest&background=000000&color=ffffff&size=128&bold=true",
+    initials: user?.email?.[0].toUpperCase() || "G",
+  };
+
   return (
     <Sidebar className="border-r-0" {...props}>
       <SidebarHeader>
@@ -133,7 +148,7 @@ export function AppSidebar({
         <NavSecondary items={data.navSecondary} className="mt-auto" />
       </SidebarContent>
       <SidebarFooter>
-        <NavUser user={data.user} />
+        <NavUser user={displayUser} />
       </SidebarFooter>
       <SidebarRail />
     </Sidebar>

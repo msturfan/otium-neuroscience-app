@@ -7,6 +7,7 @@ import { AppSidebar } from "@/components/app-sidebar";
 import { NavActions } from "@/components/nav-actions";
 import { DateDisplay } from "@/components/DateDisplay";
 import { getUser } from "@/auth/server";
+import { getUserProfile } from "@/lib/user-utils";
 import { Separator } from "@/components/ui/separator";
 import {
   SidebarInset,
@@ -25,6 +26,7 @@ export default async function RootLayout({
   children: React.ReactNode;
 }>) {
   const user = await getUser();
+  const userProfile = await getUserProfile(user);
 
   return (
     <html lang="en" suppressHydrationWarning>
@@ -37,7 +39,7 @@ export default async function RootLayout({
         >
           <NoteProvider>
             <SidebarProvider>
-              <AppSidebar user={user} />
+              <AppSidebar user={user} userProfile={userProfile} />
               <SidebarInset>
                 <header className="flex h-14 shrink-0 items-center justify-between">
                   <div className="flex items-center gap-2 px-3">
