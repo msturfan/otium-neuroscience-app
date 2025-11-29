@@ -85,7 +85,7 @@ export function NavNotes({ user }: Props) {
     setUserNotes((prev) => prev.filter((note) => note.id !== noteId));
   };
 
-  const getNoteTitle = (note: UserNote) => {
+  const getNoteTitle = (note: UserNote | { id: string; text: string; title?: string | null; createdAt: Date }) => {
     // Use AI-generated title if available
     if (note.title && note.title.trim()) {
       return note.title;

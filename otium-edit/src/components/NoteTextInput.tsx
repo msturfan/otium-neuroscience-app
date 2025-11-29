@@ -12,6 +12,7 @@ import NotesFeed, { NoteLike } from "./NotesFeed";
 import useNote from "@/hooks/useNote";
 import { GuestNote } from "@/providers/NoteProvider";
 import { updateNoteAction, createNoteAction } from "@/actions/notes";
+import { generateNoteTitle } from "@/actions/generate-title";
 import MicrophoneButton from "./MicrophoneButton";
 import AskAIButton from "./AskAIButton";
 
@@ -87,18 +88,28 @@ export default function NoteTextInput({
   }, [noteText]);
 
   // ---------- Helpers ----------
-  const upsertGuestNote = (text: string) => {
+  const upsertGuestNote = async (text: string) => {
     const existing = guestNotes.find((n) => n.id === noteId);
-    if (existing) updateGuestNote(noteId, text);
-    else addGuestNote({ id: noteId, text, createdAt: new Date() });
+    
+    // Generate title if note has substantial content
+    let title: string | null = null;
+    if (text.trim().length > 20) {
+      title = await generateNoteTitle(text);
+    }
+    
+    if (existing) {
+      updateGuestNote(noteId, text, title);
+    } else {
+      addGuestNote({ id: noteId, text, title, createdAt: new Date() });
+    }
   };
 
-  // Only autosave while EDITING.
+    // Only autosave while EDITING.
   const scheduleSave = (text: string) => {
     if (!isEditing) return; // â† important: do NOT touch the saved note while composing a new one
     if (updateTimeoutRef.current) clearTimeout(updateTimeoutRef.current);
-    updateTimeoutRef.current = setTimeout(() => {
-      if (!user) upsertGuestNote(text);
+    updateTimeoutRef.current = setTimeout(async () => {
+      if (!user) await upsertGuestNote(text);
       else updateNoteAction(noteId, text);
     }, 1200);
   };
@@ -107,7 +118,7 @@ export default function NoteTextInput({
     if (!isEditing) return; // safety: only flush when editing
     if (updateTimeoutRef.current) clearTimeout(updateTimeoutRef.current);
     if (!user) {
-      upsertGuestNote(text);
+      await upsertGuestNote(text);
       return;
     }
     const res = await updateNoteAction(noteId, text);
@@ -140,7 +151,7 @@ export default function NoteTextInput({
     } else {
       // First-time send (or re-send in create mode): persist once
       if (!user) {
-        upsertGuestNote(textToSave);
+        await upsertGuestNote(textToSave);
 
         // Show guest login prompt
         toast.info("Please log in or sign up to save your notes", {
