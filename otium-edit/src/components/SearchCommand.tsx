@@ -19,6 +19,7 @@ import { getUser } from "@/auth/server";
 type UserNote = {
   id: string;
   text: string;
+  title?: string | null;
   createdAt: Date;
 };
 
@@ -58,9 +59,15 @@ export function SearchCommand() {
     router.push(`/?noteId=${noteId}`);
   };
 
-  const getNoteTitle = (text: string) => {
-    if (!text.trim()) return "Empty Note";
-    const firstLine = text.split("\n")[0];
+  const getNoteTitle = (note: UserNote) => {
+    // Use AI-generated title if available
+    if (note.title && note.title.trim()) {
+      return note.title;
+    }
+
+    // Fallback to first line or first 50 characters
+    if (!note.text.trim()) return "Empty Note";
+    const firstLine = note.text.split("\n")[0];
     return firstLine.length > 50
       ? firstLine.substring(0, 50) + "..."
       : firstLine;
@@ -97,7 +104,7 @@ export function SearchCommand() {
         variant="ghost"
         size="sm"
         onClick={() => setOpen(true)}
-        className="h-8 px-3 justify-start"
+        className="h-8 justify-start px-3"
         title="Search"
       >
         <Search className="h-4 w-4" />
@@ -138,9 +145,7 @@ export function SearchCommand() {
                   <div className="flex w-full items-start justify-between">
                     <div className="flex items-center gap-2">
                       <FileText className="text-muted-foreground h-4 w-4" />
-                      <span className="font-medium">
-                        {getNoteTitle(note.text)}
-                      </span>
+                      <span className="font-medium">{getNoteTitle(note)}</span>
                     </div>
                     <div className="text-muted-foreground flex items-center gap-1 text-xs">
                       <Clock className="h-3 w-3" />
