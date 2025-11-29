@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { FileText, Copy, Loader2 } from "lucide-react";
+import { Copy, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import Image from "next/image";
 import {
@@ -28,6 +28,7 @@ import { User } from "@supabase/supabase-js";
 type UserNote = {
   id: string;
   text: string;
+  title?: string | null;
   token?: string; // Make token optional temporarily
   createdAt: Date;
 };
@@ -84,10 +85,15 @@ export function NavNotes({ user }: Props) {
     setUserNotes((prev) => prev.filter((note) => note.id !== noteId));
   };
 
-  const getNoteTitle = (text: string) => {
-    if (!text.trim()) return "Empty Note";
-    // Get first line or first 30 characters
-    const firstLine = text.split("\n")[0];
+  const getNoteTitle = (note: UserNote) => {
+    // Use AI-generated title if available
+    if (note.title && note.title.trim()) {
+      return note.title;
+    }
+
+    // Fallback to first line or first 30 characters
+    if (!note.text.trim()) return "Empty Note";
+    const firstLine = note.text.split("\n")[0];
     return firstLine.length > 30
       ? firstLine.substring(0, 30) + "..."
       : firstLine;
@@ -142,10 +148,9 @@ export function NavNotes({ user }: Props) {
                 onClick={() => handleNoteClick(note.id)}
                 className="pr-20"
               >
-                <FileText className="h-4 w-4" />
                 <div className="flex-1 overflow-hidden">
-                  <div className="truncate text-sm">
-                    {getNoteTitle(note.text)}
+                  <div className="truncate text-sm font-medium">
+                    {getNoteTitle(note)}
                   </div>
                   <div className="text-muted-foreground text-xs">
                     {formatNoteDate(note.createdAt)}

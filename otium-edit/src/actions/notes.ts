@@ -3,6 +3,7 @@
 import { getUser } from "@/auth/server";
 import { prisma } from "@/db/prisma";
 import { handleError } from "@/lib/utils";
+import { generateNoteTitle } from "./generate-title";
 
 export async function createNoteAction(id?: string) {
   const user = await getUser();
@@ -27,14 +28,49 @@ export async function updateNoteAction(id: string, text: string) {
   if (!user) return { errorMessage: "Not signed in" };
 
   try {
+    // Check if note exists and get current title
+    const existingNote = await prisma.note.findUnique({
+      where: { id },
+      select: { title: true, text: true },
+    });
+
+    // Generate title if:
+    // 1. Note doesn't exist yet (new note)
+    // 2. Note exists but has no title
+    // 3. Text has changed significantly (optional - regenerate if text changed a lot)
+    let title = existingNote?.title;
+
+    if (!title && text.trim().length > 20) {
+      // Only generate title for notes with substantial content
+      title = await generateNoteTitle(text);
+
+      // If AI generation fails, use a simple fallback
+      if (!title) {
+        const firstLine = text.split("\n")[0].trim();
+        title =
+          firstLine.length > 50
+            ? firstLine.substring(0, 47) + "..."
+            : firstLine;
+      }
+    }
+
     const result = await prisma.note.updateMany({
       where: { id, authorId: user.id },
-      data: { text },
+      data: {
+        text,
+        ...(title && { title }), // Only update title if generated
+      },
     });
 
     if (result.count === 0) {
+      // Note doesn't exist, create it
       await prisma.note.create({
-        data: { id, authorId: user.id, text },
+        data: {
+          id,
+          authorId: user.id,
+          text,
+          title: title || null,
+        },
       });
     }
     return { id };
@@ -69,6 +105,7 @@ export const fetchUserNotesAction = async () => {
       select: {
         id: true,
         text: true,
+        title: true,
         createdAt: true,
       },
     });
