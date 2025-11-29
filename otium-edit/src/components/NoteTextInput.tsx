@@ -259,7 +259,7 @@ export default function NoteTextInput({
               <div className="flex items-center gap-2" />
               <div className="flex items-center gap-2">
                 <MicrophoneButton onTranscript={handleSpeechTranscript} />
-                <AskAIButton user={user} />
+                <AskAIButton user={user} noteText={noteText} />
                 <NewNoteButton
                   user={user}
                   onSend={sendNote}
