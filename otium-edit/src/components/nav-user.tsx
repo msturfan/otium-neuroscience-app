@@ -8,6 +8,7 @@ import {
   IconUserCircle,
 } from "@tabler/icons-react";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 import { toast } from "sonner";
 import { logOutAction } from "@/actions/users";
 import * as React from "react";
@@ -111,9 +112,11 @@ export function NavUser({
                 <IconUserCircle />
                 Account
               </DropdownMenuItem>
-              <DropdownMenuItem>
-                <IconCreditCard />
-                Billing
+              <DropdownMenuItem asChild>
+                <Link href="/billing" className="flex items-center">
+                  <IconCreditCard />
+                  Billing
+                </Link>
               </DropdownMenuItem>
               <DropdownMenuItem>
                 <IconNotification />

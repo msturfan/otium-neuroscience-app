@@ -10,6 +10,7 @@ datasource db {
 model Note {
   id        String   @id @default(uuid())
   text      String
+  title     String?
   token     String   @unique @default(uuid())
   authorId  String
   createdAt DateTime @default(now())
