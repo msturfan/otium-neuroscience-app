@@ -12,10 +12,35 @@ export const loginAction = async (email: string, password: string) => {
       email,
       password,
     });
-    if (error) throw error;
+
+    // Check for authentication errors first
+    if (error) {
+      // Provide user-friendly error messages for common cases
+      if (
+        error.message.includes("Invalid login credentials") ||
+        error.message.includes("Email not confirmed") ||
+        error.status === 400
+      ) {
+        return {
+          errorMessage:
+            "Invalid email or password. Please check your credentials and try again.",
+          requiresEmailVerification: false,
+        };
+      }
+      throw error;
+    }
+
+    // Check if user exists (authentication was successful)
+    if (!data.user) {
+      return {
+        errorMessage:
+          "Invalid email or password. Please check your credentials and try again.",
+        requiresEmailVerification: false,
+      };
+    }
 
     // Check if email is verified
-    const emailConfirmed = data.user?.email_confirmed_at !== null;
+    const emailConfirmed = data.user.email_confirmed_at !== null;
 
     if (!emailConfirmed) {
       // Sign out the user if email is not verified
@@ -29,7 +54,22 @@ export const loginAction = async (email: string, password: string) => {
 
     return { errorMessage: null, requiresEmailVerification: false };
   } catch (error) {
-    return { ...handleError(error), requiresEmailVerification: false };
+    // Handle any unexpected errors
+    const errorResult = handleError(error);
+    // Ensure we provide a user-friendly message for authentication failures
+    if (
+      errorResult.errorMessage.includes("Invalid") ||
+      errorResult.errorMessage.includes("credentials") ||
+      errorResult.errorMessage.includes("email") ||
+      errorResult.errorMessage.includes("password")
+    ) {
+      return {
+        errorMessage:
+          "Invalid email or password. Please check your credentials and try again.",
+        requiresEmailVerification: false,
+      };
+    }
+    return { ...errorResult, requiresEmailVerification: false };
   }
 };
 

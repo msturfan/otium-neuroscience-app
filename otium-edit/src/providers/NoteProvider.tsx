@@ -5,6 +5,7 @@ import { createContext, useState, useEffect } from "react";
 export type GuestNote = {
   id: string;
   text: string;
+  title?: string | null;
   createdAt: Date;
 };
 
@@ -13,7 +14,7 @@ type NoteProviderContextType = {
   setNoteText: (noteText: string) => void;
   guestNotes: GuestNote[];
   addGuestNote: (note: GuestNote) => void;
-  updateGuestNote: (id: string, text: string) => void;
+  updateGuestNote: (id: string, text: string, title?: string | null) => void;
   deleteGuestNote: (id: string) => void;
   clearGuestNotes: () => void;
 };
@@ -49,9 +50,9 @@ function NoteProvider({ children }: { children: React.ReactNode }) {
     setGuestNotes((prev) => [note, ...prev]);
   };
 
-  const updateGuestNote = (id: string, text: string) => {
+  const updateGuestNote = (id: string, text: string, title?: string | null) => {
     setGuestNotes((prev) =>
-      prev.map((note) => (note.id === id ? { ...note, text } : note)),
+      prev.map((note) => (note.id === id ? { ...note, text, ...(title !== undefined && { title }) } : note)),
     );
   };
 

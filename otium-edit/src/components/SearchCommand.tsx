@@ -59,7 +59,7 @@ export function SearchCommand() {
     router.push(`/?noteId=${noteId}`);
   };
 
-  const getNoteTitle = (note: UserNote) => {
+  const getNoteTitle = (note: UserNote | { id: string; text: string; title?: string | null; createdAt: Date }) => {
     // Use AI-generated title if available
     if (note.title && note.title.trim()) {
       return note.title;
