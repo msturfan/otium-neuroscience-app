@@ -40,14 +40,26 @@ ${cleanText}
 
 Suggestions:`;
 
+    // Get configuration from environment (required, no fallbacks)
+    const ollamaUrl = process.env.OLLAMA_API_URL;
+    const model = process.env.OLLAMA_MODEL_SUGGESTIONS;
+
+    if (!ollamaUrl || !model) {
+      console.error("Ollama configuration missing. Set OLLAMA_API_URL and OLLAMA_MODEL_SUGGESTIONS in .env.local");
+      return {
+        suggestions: [],
+        errorMessage: "AI service is not configured. Please contact support.",
+      };
+    }
+
     // Call Ollama API
-    const response = await fetch("http://localhost:11434/api/generate", {
+    const response = await fetch(`${ollamaUrl}/api/generate`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        model: "qwen2:1.5b",
+        model: model,
         prompt: prompt,
         stream: false,
         options: {
