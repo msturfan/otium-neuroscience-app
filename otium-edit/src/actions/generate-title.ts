@@ -10,18 +10,26 @@ export async function generateNoteTitle(
     // Clean up the text
     const cleanText = truncatedText.trim().replace(/\n+/g, " ");
 
+    const ollamaUrl = process.env.OLLAMA_API_URL;
+    const model = process.env.OLLAMA_MODEL_TITLE;
+
+    if (!ollamaUrl || !model) {
+      console.error("Ollama configuration missing. Set OLLAMA_API_URL and OLLAMA_MODEL_TITLE in .env.local");
+      return null; // Fail silently or throw error
+    }
+
     // Create the prompt - be very strict about length
     const prompt = `Summarize the user's daily's message (and optionally the AI’s first reply) in 5-7 words, to serve as the conversation title. Use the same language as the user. The title should reflect the main topic and be easy to scan in a list.
     Create a short title (MAXIMUM 5 words, prefer 3-4 words) for this note. Return ONLY the title words, nothing else. No quotes, no punctuation, no explanations:\n\n${cleanText}`;
 
     // Call Ollama API
-    const response = await fetch("http://localhost:11434/api/generate", {
+    const response = await fetch(`${ollamaUrl}/api/generate`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        model: "qwen2:1.5b",
+        model: model,
         prompt: prompt,
         stream: false, // We want the full response, not streaming
         options: {
