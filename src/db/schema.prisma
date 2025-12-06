@@ -1,0 +1,65 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url = env("DATABASE_URL")
+}
+
+model Note {
+  id        String   @id @default(uuid())
+  text      String
+  title     String?
+  token     String   @unique @default(uuid())
+  authorId  String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @default(now()) @updatedAt
+  author    User     @relation(fields: [authorId], references: [id])
+}
+
+model WeeklyStreak {
+  id        String   @id @default(uuid())
+  userId    String
+  weekStart DateTime // Sunday 00:00 of the week in user's timezone
+  sunday    Boolean  @default(false)
+  monday    Boolean  @default(false)
+  tuesday   Boolean  @default(false)
+  wednesday Boolean  @default(false)
+  thursday  Boolean  @default(false)
+  friday    Boolean  @default(false)
+  saturday  Boolean  @default(false)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @default(now()) @updatedAt
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  @@unique([userId, weekStart])
+  @@index([userId])
+}
+
+model UserStreakHistory {
+  id          String   @id @default(uuid())
+  userId      String
+  bestStreak  Int      @default(0) // Best consecutive days in a week (max 7)
+  totalWeeks  Int      @default(0) // Total number of completed weeks
+  lastUpdated DateTime @default(now()) @updatedAt
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  @@unique([userId])
+  @@index([userId])
+}
+
+model User {
+  id        String   @id @default(uuid())
+  email     String   @unique
+  firstName String?
+  lastName  String?
+  dob       DateTime?
+  isGuest   Boolean  @default(false)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @default(now()) @updatedAt
+  notes     Note[]
+
+  weeklyStreaks     WeeklyStreak[]
+  streakHistory     UserStreakHistory?
+}
