@@ -90,13 +90,13 @@ export default function NoteTextInput({
   // ---------- Helpers ----------
   const upsertGuestNote = async (text: string) => {
     const existing = guestNotes.find((n) => n.id === noteId);
-    
+
     // Generate title if note has substantial content
     let title: string | null = null;
     if (text.trim().length > 20) {
       title = await generateNoteTitle(text);
     }
-    
+
     if (existing) {
       updateGuestNote(noteId, text, title);
     } else {
@@ -104,7 +104,7 @@ export default function NoteTextInput({
     }
   };
 
-    // Only autosave while EDITING.
+  // Only autosave while EDITING.
   const scheduleSave = (text: string) => {
     if (!isEditing) return; // â† important: do NOT touch the saved note while composing a new one
     if (updateTimeoutRef.current) clearTimeout(updateTimeoutRef.current);
@@ -124,7 +124,9 @@ export default function NoteTextInput({
     const res = await updateNoteAction(noteId, text);
     if (res?.errorMessage) {
       const created = await createNoteAction(noteId);
-      if (!created?.errorMessage) await updateNoteAction(noteId, text);
+      if (!created?.errorMessage) {
+        await updateNoteAction(noteId, text);
+      }
     }
   };
 
@@ -166,14 +168,22 @@ export default function NoteTextInput({
         if (res?.errorMessage) {
           const created = await createNoteAction(noteId);
           if (!created?.errorMessage) {
-            await updateNoteAction(noteId, textToSave);
+            const updateRes = await updateNoteAction(noteId, textToSave);
             toast.success("Note created successfully");
+            // Check if this is the first note of the day
+            if (updateRes?.isFirstNoteOfDay && user) {
+              window.dispatchEvent(new CustomEvent("firstDailyNoteSaved"));
+            }
           } else {
             toast.error("Failed to create note");
             return; // Don't proceed with clearing if failed
           }
         } else {
           toast.success("Note saved successfully");
+          // Check if this is the first note of the day
+          if (res?.isFirstNoteOfDay && user) {
+            window.dispatchEvent(new CustomEvent("firstDailyNoteSaved"));
+          }
         }
       }
     }

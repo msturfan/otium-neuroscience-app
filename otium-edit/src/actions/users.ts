@@ -91,6 +91,7 @@ export const signUpAction = async (
   password: string,
   firstName?: string,
   lastName?: string,
+  dob?: Date,
 ) => {
   try {
     const { auth } = await createClient();
@@ -117,12 +118,14 @@ export const signUpAction = async (
         email,
         firstName: firstName || null,
         lastName: lastName || null,
+        dob: dob || null,
       },
       create: {
         id: userId,
         email,
         firstName: firstName || null,
         lastName: lastName || null,
+        dob: dob || null,
       },
     });
 

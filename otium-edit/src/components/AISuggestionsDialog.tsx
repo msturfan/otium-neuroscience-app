@@ -84,8 +84,8 @@ export function AISuggestionsDialog({
               </p>
             </div>
           ) : errorMessage ? (
-            <div className="rounded-lg border border-destructive/50 bg-destructive/10 p-4">
-              <p className="text-destructive text-sm">{errorMessage}</p>
+            <div className="rounded-lg border border-foreground/50 bg-foreground/10 p-4">
+              <p className="text-foreground text-sm">{errorMessage}</p>
               {noteText.trim().length < 20 && (
                 <Button
                   variant="outline"

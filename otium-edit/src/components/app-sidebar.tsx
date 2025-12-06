@@ -134,6 +134,11 @@ export function AppSidebar({
     initials: user?.email?.[0].toUpperCase() || "G",
   };
 
+  // Filter navSecondary to only show Calendar for logged-in users
+  const navSecondaryFiltered = user
+    ? data.navSecondary
+    : data.navSecondary.filter((item) => item.title !== "Calendar");
+
   return (
     <Sidebar className="border-r-0" {...props}>
       <SidebarHeader>
@@ -145,7 +150,7 @@ export function AppSidebar({
       </SidebarHeader>
       <SidebarContent>
         <NavNotes user={user} />
-        <NavSecondary items={data.navSecondary} className="mt-auto" />
+        <NavSecondary items={navSecondaryFiltered} className="mt-auto" />
       </SidebarContent>
       <SidebarFooter>
         <NavUser user={displayUser} />

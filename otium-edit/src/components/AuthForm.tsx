@@ -12,6 +12,7 @@ import Link from "next/link";
 import { loginAction, signUpAction } from "@/actions/users";
 import { cn } from "@/lib/utils";
 import PasswordStrengthIndicator from "./PasswordStrengthIndicator";
+import { DateOfBirthPicker } from "./DateOfBirthPicker";
 
 type Props = {
   type: "login" | "signUp";
@@ -28,6 +29,7 @@ function AuthForm({ type, className, ...props }: Props) {
   const [confirmPassword, setConfirmPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const [dob, setDob] = useState<Date | undefined>(undefined);
 
   const handleSubmit = (formData: FormData) => {
     startTransition(async () => {
@@ -42,6 +44,14 @@ function AuthForm({ type, className, ...props }: Props) {
             "confirmPassword",
           ) as string;
 
+          // Validate required fields
+          if (!firstName || !lastName || !dob) {
+            toast("Error", {
+              description: "Please fill in all required fields",
+            });
+            return;
+          }
+
           if (passwordValue !== confirmPasswordValue) {
             toast("Error", {
               description: "Passwords do not match",
@@ -54,6 +64,7 @@ function AuthForm({ type, className, ...props }: Props) {
             passwordValue,
             firstName,
             lastName,
+            dob,
           );
 
           if (!result?.errorMessage) {
@@ -195,6 +206,12 @@ function AuthForm({ type, className, ...props }: Props) {
                       disabled={isPending}
                     />
                   </div>
+                  <DateOfBirthPicker
+                    value={dob}
+                    onChange={setDob}
+                    disabled={isPending}
+                    required
+                  />
                 </>
               )}
               <div className="grid gap-3">
@@ -236,9 +253,11 @@ function AuthForm({ type, className, ...props }: Props) {
                   <button
                     type="button"
                     onClick={() => setShowPassword(!showPassword)}
-                    className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                    className="text-muted-foreground hover:text-foreground absolute top-1/2 right-3 -translate-y-1/2"
                     disabled={isPending}
-                    aria-label={showPassword ? "Hide password" : "Show password"}
+                    aria-label={
+                      showPassword ? "Hide password" : "Show password"
+                    }
                   >
                     {showPassword ? (
                       <EyeOff className="h-4 w-4" />
@@ -267,10 +286,14 @@ function AuthForm({ type, className, ...props }: Props) {
                     />
                     <button
                       type="button"
-                      onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-                      className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                      onClick={() =>
+                        setShowConfirmPassword(!showConfirmPassword)
+                      }
+                      className="text-muted-foreground hover:text-foreground absolute top-1/2 right-3 -translate-y-1/2"
                       disabled={isPending}
-                      aria-label={showConfirmPassword ? "Hide password" : "Show password"}
+                      aria-label={
+                        showConfirmPassword ? "Hide password" : "Show password"
+                      }
                     >
                       {showConfirmPassword ? (
                         <EyeOff className="h-4 w-4" />
@@ -280,7 +303,7 @@ function AuthForm({ type, className, ...props }: Props) {
                     </button>
                   </div>
                   {confirmPassword && password !== confirmPassword && (
-                    <p className="text-destructive text-xs">
+                    <p className="text-foreground text-xs">
                       Passwords do not match
                     </p>
                   )}
