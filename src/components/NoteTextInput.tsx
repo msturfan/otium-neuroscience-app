@@ -13,6 +13,7 @@ import useNote from "@/hooks/useNote";
 import { GuestNote } from "@/providers/NoteProvider";
 import { updateNoteAction, createNoteAction } from "@/actions/notes";
 import { generateNoteTitle } from "@/actions/generate-title";
+import { generateNoteGreeting } from "@/actions/generate-greeting";
 import MicrophoneButton from "./MicrophoneButton";
 import AskAIButton from "./AskAIButton";
 
@@ -56,10 +57,105 @@ export default function NoteTextInput({
   // Hide the composer after a successful send (for this visit)
   const [hideAfterSend, setHideAfterSend] = useState(false);
 
-  // Feed scoped to this noteId only
-  const feed: NoteLike[] = user
+  // Store AI greeting messages for this note
+  // Initialize as empty - will be loaded from sessionStorage if appropriate
+  const [aiGreetings, setAiGreetings] = useState<NoteLike[]>([]);
+  
+  // Track the current noteId to detect when it changes
+  const [currentNoteId, setCurrentNoteId] = useState(noteId);
+
+  // Feed scoped to this noteId only - combine user notes and AI greetings
+  const userNotes: NoteLike[] = user
     ? feedNotes
     : (guestNotes.filter((n) => n.id === noteId) as NoteLike[]);
+  
+  // Check if there's user note content (not including greetings)
+  // This must be defined before useEffect hooks that use it
+  const hasUserNoteContent = useMemo(() => {
+    return userNotes.length > 0 && userNotes[0]?.text?.trim().length > 0;
+  }, [userNotes]);
+
+  // Save AI greetings to sessionStorage whenever they change
+  // Only save if there's actual content (not just loading states) and user note exists
+  // Only save for the current note to prevent cross-contamination
+  useEffect(() => {
+    if (typeof window !== "undefined" && 
+        hasUserNoteContent && 
+        aiGreetings.length > 0 && 
+        currentNoteId === noteId) {
+      try {
+        // Filter out loading states before saving - only save actual greetings
+        const greetingsToSave = aiGreetings.filter(g => !g.isLoading && g.text);
+        if (greetingsToSave.length > 0) {
+          const serialized = JSON.stringify(greetingsToSave);
+          sessionStorage.setItem(`ai-greetings-${noteId}`, serialized);
+        }
+      } catch (error) {
+        console.error("Failed to save AI greetings to sessionStorage:", error);
+      }
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [aiGreetings, noteId, hasUserNoteContent, currentNoteId]);
+  
+  // Handle noteId changes and load appropriate greetings
+  useEffect(() => {
+    // Check if we've switched to a different note
+    if (currentNoteId !== noteId) {
+      // Clear current greetings when switching notes
+      setAiGreetings([]);
+      setCurrentNoteId(noteId);
+      
+      // Load greetings for the new note if it has content
+      if (typeof window !== "undefined" && hasUserNoteContent) {
+        try {
+          const stored = sessionStorage.getItem(`ai-greetings-${noteId}`);
+          if (stored) {
+            const parsed = JSON.parse(stored);
+            // Only load if we have content and greetings exist
+            if (parsed.length > 0) {
+              setAiGreetings(parsed);
+            }
+          }
+        } catch (error) {
+          console.error("Failed to reload AI greetings from sessionStorage:", error);
+        }
+      }
+    } else if (typeof window !== "undefined") {
+      // Same note, but check if content status changed
+      if (hasUserNoteContent) {
+        // Only load greetings if not already loaded
+        if (aiGreetings.length === 0) {
+          try {
+            const stored = sessionStorage.getItem(`ai-greetings-${noteId}`);
+            if (stored) {
+              const parsed = JSON.parse(stored);
+              if (parsed.length > 0) {
+                setAiGreetings(parsed);
+              }
+            }
+          } catch (error) {
+            console.error("Failed to reload AI greetings from sessionStorage:", error);
+          }
+        }
+      } else {
+        // Clear greetings if there's no user note content (note was deleted/cleared)
+        setAiGreetings([]);
+        // Also clear from sessionStorage for this noteId
+        try {
+          sessionStorage.removeItem(`ai-greetings-${noteId}`);
+        } catch (error) {
+          // Ignore errors when clearing
+        }
+      }
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [noteId, hasUserNoteContent, currentNoteId]);
+  
+  // Combine user notes and AI greetings, sorted by creation time
+  const feed: NoteLike[] = useMemo(() => {
+    const combined = [...userNotes, ...aiGreetings];
+    return combined.sort((a, b) => +new Date(a.createdAt) - +new Date(b.createdAt));
+  }, [userNotes, aiGreetings]);
   const currentBubbleText = useMemo(
     () => feed[0]?.text?.toString() ?? "",
     [feed],
@@ -119,15 +215,18 @@ export default function NoteTextInput({
     if (updateTimeoutRef.current) clearTimeout(updateTimeoutRef.current);
     if (!user) {
       await upsertGuestNote(text);
-      return;
+      return null;
     }
     const res = await updateNoteAction(noteId, text);
     if (res?.errorMessage) {
       const created = await createNoteAction(noteId);
       if (!created?.errorMessage) {
-        await updateNoteAction(noteId, text);
+        const updateRes = await updateNoteAction(noteId, text);
+        return updateRes;
       }
+      return null;
     }
+    return res;
   };
 
   const handleUpdateNote = (e: ChangeEvent<HTMLTextAreaElement>) => {
@@ -145,11 +244,51 @@ export default function NoteTextInput({
     if (!textToSave) return;
 
     if (isEditing) {
-      await flushSaveNow(textToSave);
+      const res = await flushSaveNow(textToSave);
       setIsEditing(false);
-
-      // Success message for editing
       toast.success("Note updated successfully");
+
+      // Generate greeting in the background after save completes
+      if (res && !res.errorMessage) {
+        // Add loading bubble immediately
+        const loadingId = `ai-greeting-loading-${Date.now()}`;
+        const loadingNote: NoteLike = {
+          id: loadingId,
+          text: "",
+          createdAt: new Date(),
+          isAI: true,
+          isLoading: true,
+        };
+        setAiGreetings((prev) => [...prev, loadingNote]);
+
+        // Generate greeting and replace loading bubble
+        // Get user's local hour for accurate time-based greeting
+        const userLocalHour = new Date().getHours();
+        generateNoteGreeting(textToSave, userLocalHour)
+          .then((greeting) => {
+            setAiGreetings((prev) => {
+              // Remove loading bubble and add actual greeting
+              const filtered = prev.filter((n) => n.id !== loadingId);
+              if (greeting) {
+                return [
+                  ...filtered,
+                  {
+                    id: `ai-greeting-${Date.now()}`,
+                    text: greeting,
+                    createdAt: new Date(),
+                    isAI: true,
+                  },
+                ];
+              }
+              return filtered; // Remove loading if no greeting
+            });
+          })
+          .catch((error) => {
+            console.error("Error generating greeting:", error);
+            // Remove loading bubble on error
+            setAiGreetings((prev) => prev.filter((n) => n.id !== loadingId));
+          });
+      }
     } else {
       // First-time send (or re-send in create mode): persist once
       if (!user) {
@@ -174,6 +313,46 @@ export default function NoteTextInput({
             if (updateRes?.isFirstNoteOfDay && user) {
               window.dispatchEvent(new CustomEvent("firstDailyNoteSaved"));
             }
+            
+            // Generate greeting in the background after save completes
+            // Add loading bubble immediately
+            const loadingId = `ai-greeting-loading-${Date.now()}`;
+            const loadingNote: NoteLike = {
+              id: loadingId,
+              text: "",
+              createdAt: new Date(),
+              isAI: true,
+              isLoading: true,
+            };
+            setAiGreetings((prev) => [...prev, loadingNote]);
+
+            // Generate greeting and replace loading bubble
+            // Get user's local hour for accurate time-based greeting
+            const userLocalHour2 = new Date().getHours();
+            generateNoteGreeting(textToSave, userLocalHour2)
+              .then((greeting) => {
+                setAiGreetings((prev) => {
+                  // Remove loading bubble and add actual greeting
+                  const filtered = prev.filter((n) => n.id !== loadingId);
+                  if (greeting) {
+                    return [
+                      ...filtered,
+                      {
+                        id: `ai-greeting-${Date.now()}`,
+                        text: greeting,
+                        createdAt: new Date(),
+                        isAI: true,
+                      },
+                    ];
+                  }
+                  return filtered; // Remove loading if no greeting
+                });
+              })
+              .catch((error) => {
+                console.error("Error generating greeting:", error);
+                // Remove loading bubble on error
+                setAiGreetings((prev) => prev.filter((n) => n.id !== loadingId));
+              });
           } else {
             toast.error("Failed to create note");
             return; // Don't proceed with clearing if failed
@@ -184,6 +363,46 @@ export default function NoteTextInput({
           if (res?.isFirstNoteOfDay && user) {
             window.dispatchEvent(new CustomEvent("firstDailyNoteSaved"));
           }
+          
+          // Generate greeting in the background after save completes
+          // Add loading bubble immediately
+          const loadingId2 = `ai-greeting-loading-${Date.now()}`;
+          const loadingNote2: NoteLike = {
+            id: loadingId2,
+            text: "",
+            createdAt: new Date(),
+            isAI: true,
+            isLoading: true,
+          };
+          setAiGreetings((prev) => [...prev, loadingNote2]);
+
+          // Generate greeting and replace loading bubble
+          // Get user's local hour for accurate time-based greeting
+          const userLocalHour3 = new Date().getHours();
+          generateNoteGreeting(textToSave, userLocalHour3)
+            .then((greeting) => {
+              setAiGreetings((prev) => {
+                // Remove loading bubble and add actual greeting
+                const filtered = prev.filter((n) => n.id !== loadingId2);
+                if (greeting) {
+                  return [
+                    ...filtered,
+                    {
+                      id: `ai-greeting-${Date.now()}`,
+                      text: greeting,
+                      createdAt: new Date(),
+                      isAI: true,
+                    },
+                  ];
+                }
+                return filtered; // Remove loading if no greeting
+              });
+            })
+            .catch((error) => {
+              console.error("Error generating greeting:", error);
+              // Remove loading bubble on error
+              setAiGreetings((prev) => prev.filter((n) => n.id !== loadingId2));
+            });
         }
       }
     }
@@ -199,6 +418,7 @@ export default function NoteTextInput({
     shell?.classList.add("justify-start");
 
     // Add router refresh to update UI with new note (only for authenticated users)
+    // Refresh immediately - note is already saved, no need to wait
     if (user) {
       router.refresh();
     }

@@ -12,6 +12,7 @@ type BubbleProps = {
   text: string;
   timestamp?: Date | string;
   mine?: boolean;
+  isLoading?: boolean;
   onCopy?: (text: string) => void;
   onEdit?: (text: string) => void;
 };
@@ -20,6 +21,7 @@ export default function MessageBubble({
   text,
   timestamp,
   mine = true,
+  isLoading = false,
   onCopy,
   onEdit,
 }: BubbleProps) {
@@ -35,8 +37,16 @@ export default function MessageBubble({
             mine ? "bg-primary text-primary-foreground" : "bg-muted",
           ].join(" ")}
         >
-          <p>{text}</p>
-          {time ? (
+          {isLoading ? (
+            <div className="flex items-center gap-1.5 py-1">
+              <span className="h-2 w-2 rounded-full bg-current opacity-60 animate-[bounce_1.4s_ease-in-out_infinite]"></span>
+              <span className="h-2 w-2 rounded-full bg-current opacity-60 animate-[bounce_1.4s_ease-in-out_0.2s_infinite]"></span>
+              <span className="h-2 w-2 rounded-full bg-current opacity-60 animate-[bounce_1.4s_ease-in-out_0.4s_infinite]"></span>
+            </div>
+          ) : (
+            <p>{text}</p>
+          )}
+          {time && !isLoading ? (
             <span className="mt-1 block text-[10px] opacity-60">{time}</span>
           ) : null}
         </div>

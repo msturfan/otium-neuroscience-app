@@ -34,31 +34,12 @@ export async function updateNoteAction(id: string, text: string) {
       select: { title: true, text: true },
     });
 
-    // Generate title if:
-    // 1. Note doesn't exist yet (new note)
-    // 2. Note exists but has no title
-    // 3. Text has changed significantly (optional - regenerate if text changed a lot)
-    let title = existingNote?.title;
-
-    if (!title && text.trim().length > 20) {
-      // Only generate title for notes with substantial content
-      title = await generateNoteTitle(text);
-
-      // If AI generation fails, use a simple fallback
-      if (!title) {
-        const firstLine = text.split("\n")[0].trim();
-        title =
-          firstLine.length > 50
-            ? firstLine.substring(0, 47) + "..."
-            : firstLine;
-      }
-    }
-
+    // Save note immediately without waiting for title generation
     const result = await prisma.note.updateMany({
       where: { id, authorId: user.id },
       data: {
         text,
-        ...(title && { title }), // Only update title if generated
+        // Don't update title here - it will be updated asynchronously
       },
     });
 
@@ -69,10 +50,52 @@ export async function updateNoteAction(id: string, text: string) {
           id,
           authorId: user.id,
           text,
-          title: title || null,
+          title: null, // Title will be generated asynchronously
         },
       });
     }
+
+    // Generate title in the background (non-blocking)
+    const needsTitle = !existingNote?.title && text.trim().length > 20;
+    if (needsTitle) {
+      generateNoteTitle(text)
+        .then((title) => {
+          if (title) {
+            // Update title asynchronously
+            prisma.note
+              .updateMany({
+                where: { id, authorId: user.id },
+                data: { title },
+              })
+              .catch((error) => {
+                console.error("Error updating title:", error);
+              });
+          } else {
+            // Fallback title
+            const firstLine = text.split("\n")[0].trim();
+            const fallbackTitle =
+              firstLine.length > 50
+                ? firstLine.substring(0, 47) + "..."
+                : firstLine;
+            prisma.note
+              .updateMany({
+                where: { id, authorId: user.id },
+                data: { title: fallbackTitle },
+              })
+              .catch((error) => {
+                console.error("Error updating fallback title:", error);
+              });
+          }
+        })
+        .catch((error) => {
+          console.error("Error generating title:", error);
+        });
+    }
+
+    // Note: Greeting generation is now handled on the client side
+    // to ensure accurate user local time and better UX with loading indicators
+
+    // Return immediately without waiting for greeting
     return { id };
   } catch (e) {
     return { errorMessage: "DB error" };
