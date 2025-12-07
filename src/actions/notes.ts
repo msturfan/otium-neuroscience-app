@@ -33,6 +33,24 @@ export async function updateNoteAction(id: string, text: string) {
       where: { id },
       select: { title: true, text: true },
     });
+    
+    // Check if this is the first note of the day
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const tomorrow = new Date(today);
+    tomorrow.setDate(tomorrow.getDate() + 1);
+    
+    const notesToday = await prisma.note.count({
+      where: {
+        authorId: user.id,
+        createdAt: {
+          gte: today,
+          lt: tomorrow,
+        },
+      },
+    });
+    
+    const isFirstNoteOfDay = notesToday === 0;
 
     // Save note immediately without waiting for title generation
     const result = await prisma.note.updateMany({
@@ -96,7 +114,7 @@ export async function updateNoteAction(id: string, text: string) {
     // to ensure accurate user local time and better UX with loading indicators
 
     // Return immediately without waiting for greeting
-    return { id };
+    return { id, isFirstNoteOfDay };
   } catch (e) {
     return { errorMessage: "DB error" };
   }
