@@ -68,35 +68,35 @@ export default function QuoteDisplay({ userEmail }: QuoteDisplayProps) {
 
   if (!todayQuote) {
     return (
-      <div className="flex min-h-screen items-center justify-center">
+      <div className="flex flex-1 items-center justify-center">
         <div className="text-muted-foreground">Loading today's quote...</div>
       </div>
     );
   }
 
   return (
-    <div className="flex min-h-screen items-center justify-center px-4 py-8">
-      <div className="w-full max-w-2xl">
+    <div className="flex min-h-[calc(100vh-3.5rem-5rem)] flex-1 items-center justify-center">
+      <div className="w-full max-w-2xl px-4">
         <Card className="relative overflow-hidden">
           {/* Icon at the top */}
-          <div className="flex justify-center pt-8 pb-4">
-            <div className="bg-primary/10 rounded-full p-4">
-              <Landmark className="text-primary h-10 w-10" />
+          <div className="flex justify-center pt-6 pb-4 sm:pt-8">
+            <div className="bg-primary/10 rounded-full p-3 sm:p-4">
+              <Landmark className="text-primary h-8 w-8 sm:h-10 sm:w-10" />
             </div>
           </div>
 
-          <CardContent className="px-8 pb-8">
+          <CardContent className="px-4 pb-6 sm:px-8 sm:pb-8">
             {/* Quote */}
-            <div className="space-y-6">
+            <div className="space-y-4 sm:space-y-6">
               <blockquote className="text-center">
-                <p className="text-foreground text-2xl leading-relaxed font-medium italic md:text-3xl">
+                <p className="text-foreground text-xl leading-relaxed font-medium italic sm:text-2xl md:text-3xl">
                   {todayQuote.text}
                 </p>
               </blockquote>
 
               {/* Author */}
               <div className="text-right">
-                <p className="text-muted-foreground text-lg font-semibold">
+                <p className="text-muted-foreground text-base font-semibold sm:text-lg">
                   — {todayQuote.author}
                 </p>
               </div>
@@ -110,8 +110,8 @@ export default function QuoteDisplay({ userEmail }: QuoteDisplayProps) {
         </Card>
 
         {/* Additional info card */}
-        <div className="mt-6 text-center">
-          <p className="text-muted-foreground text-sm">
+        <div className="mt-4 text-center sm:mt-6">
+          <p className="text-muted-foreground text-xs sm:text-sm">
             Visit this page daily for a new inspiring quote to brighten your day
           </p>
         </div>
