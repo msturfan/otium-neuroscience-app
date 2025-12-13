@@ -138,3 +138,90 @@ export const signUpAction = async (
     return { ...handleError(error), requiresEmailVerification: false };
   }
 };
+
+export const updateFirstNameAction = async (firstName: string) => {
+  try {
+    const { auth } = await createClient();
+    const {
+      data: { user },
+    } = await auth.getUser();
+
+    if (!user) {
+      return { errorMessage: "User not authenticated" };
+    }
+
+    await prisma.user.update({
+      where: { id: user.id },
+      data: { firstName },
+    });
+
+    return { errorMessage: null };
+  } catch (error) {
+    return handleError(error);
+  }
+};
+
+export const updateLastNameAction = async (lastName: string) => {
+  try {
+    const { auth } = await createClient();
+    const {
+      data: { user },
+    } = await auth.getUser();
+
+    if (!user) {
+      return { errorMessage: "User not authenticated" };
+    }
+
+    await prisma.user.update({
+      where: { id: user.id },
+      data: { lastName },
+    });
+
+    return { errorMessage: null };
+  } catch (error) {
+    return handleError(error);
+  }
+};
+
+export const updatePasswordAction = async (
+  oldPassword: string,
+  newPassword: string,
+) => {
+  try {
+    const { auth } = await createClient();
+    const {
+      data: { user },
+    } = await auth.getUser();
+
+    if (!user) {
+      return { errorMessage: "User not authenticated" };
+    }
+
+    if (!user.email) {
+      return { errorMessage: "User email not found" };
+    }
+
+    // Verify old password by attempting to sign in
+    const { error: verifyError } = await auth.signInWithPassword({
+      email: user.email,
+      password: oldPassword,
+    });
+
+    if (verifyError) {
+      return { errorMessage: "Current password is incorrect" };
+    }
+
+    // Update password
+    const { error: updateError } = await auth.updateUser({
+      password: newPassword,
+    });
+
+    if (updateError) {
+      throw updateError;
+    }
+
+    return { errorMessage: null };
+  } catch (error) {
+    return handleError(error);
+  }
+};
