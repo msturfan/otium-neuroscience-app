@@ -39,9 +39,21 @@ const OtiumLogo = ({ className }: { className?: string }) => (
     <Image
       src="/appicon1.ico"
       alt="Otium"
-      width={20}
-      height={20}
-      className="h-full w-full"
+      width={24}
+      height={24}
+      className="h-full w-full object-contain"
+    />
+  </div>
+);
+
+const NeuroplasticityLogo = ({ className }: { className?: string }) => (
+  <div className={className}>
+    <Image
+      src="/neuroplasticity-logo.png"
+      alt="Neuroplasticity"
+      width={24}
+      height={24}
+      className="h-full w-full object-contain"
     />
   </div>
 );
@@ -64,9 +76,11 @@ const data = {
       isActive: true,
     },
     {
-      name: "Coming Soon...",
-      logo: AudioWaveform,
+      name: "Neuroplasticity",
+      logo: NeuroplasticityLogo,
       plan: "Startup",
+      url: "/neuroplasticity",
+      isActive: true,
     },
     {
       name: "Coming Soon...",
