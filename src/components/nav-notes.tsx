@@ -85,7 +85,11 @@ export function NavNotes({ user }: Props) {
     setUserNotes((prev) => prev.filter((note) => note.id !== noteId));
   };
 
-  const getNoteTitle = (note: UserNote | { id: string; text: string; title?: string | null; createdAt: Date }) => {
+  const getNoteTitle = (
+    note:
+      | UserNote
+      | { id: string; text: string; title?: string | null; createdAt: Date },
+  ) => {
     // Use AI-generated title if available
     if (note.title && note.title.trim()) {
       return note.title;
@@ -146,9 +150,9 @@ export function NavNotes({ user }: Props) {
               <SidebarMenuButton
                 isActive={currentNoteId === note.id}
                 onClick={() => handleNoteClick(note.id)}
-                className="pr-20"
+                className="pr-10"
               >
-                <div className="flex-1 overflow-hidden">
+                <div className="flex min-w-0 flex-1 flex-col overflow-hidden">
                   <div className="truncate text-sm font-medium">
                     {getNoteTitle(note)}
                   </div>
