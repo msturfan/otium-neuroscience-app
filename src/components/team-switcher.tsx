@@ -1,7 +1,7 @@
 "use client";
 
 import * as React from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, usePathname } from "next/navigation";
 import { ChevronDown, Plus } from "lucide-react";
 
 import {
@@ -30,7 +30,32 @@ export function TeamSwitcher({
   }[];
 }) {
   const router = useRouter();
-  const [activeTeam, setActiveTeam] = React.useState(teams[0]);
+  const pathname = usePathname();
+  
+  const [activeTeam, setActiveTeam] = React.useState(() => {
+    // Initial state based on current pathname
+    const matchingTeam = teams.find((team) => {
+      if (!team.url) return false;
+      if (team.url === "/") {
+        return pathname === "/";
+      }
+      return pathname.startsWith(team.url);
+    });
+    return matchingTeam || teams[0];
+  });
+
+  // Update active team when pathname changes
+  React.useEffect(() => {
+    const matchingTeam = teams.find((team) => {
+      if (!team.url) return false;
+      if (team.url === "/") {
+        return pathname === "/";
+      }
+      return pathname.startsWith(team.url);
+    });
+    const newActiveTeam = matchingTeam || teams[0];
+    setActiveTeam(newActiveTeam);
+  }, [pathname, teams]);
 
   if (!activeTeam) {
     return null;
@@ -49,7 +74,7 @@ export function TeamSwitcher({
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <SidebarMenuButton className="w-fit px-1.5">
-              <div className="bg-sidebar-primary text-sidebar-primary-foreground flex aspect-square size-5 items-center justify-center rounded-full overflow-hidden">
+              <div className="flex aspect-square size-5 items-center justify-center rounded-full overflow-hidden">
                 <activeTeam.logo className="size-full" />
               </div>
               <span className="truncate font-medium">{activeTeam.name}</span>

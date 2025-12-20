@@ -4,6 +4,7 @@ import * as React from "react";
 import Image from "next/image";
 import {
   AudioWaveform,
+  Brain,
   Calendar,
   Command,
   Notebook,
@@ -47,16 +48,8 @@ const OtiumLogo = ({ className }: { className?: string }) => (
   </div>
 );
 
-const NeuroplasticityLogo = ({ className }: { className?: string }) => (
-  <div className={className}>
-    <Image
-      src="/neuroplasticity-logo.png"
-      alt="Neuroplasticity"
-      width={24}
-      height={24}
-      className="h-full w-full object-contain"
-    />
-  </div>
+export const NeuroplasticityLogo = ({ className }: { className?: string }) => (
+  <Brain className={className} />
 );
 
 type UserProfile = {
