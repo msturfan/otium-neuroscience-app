@@ -15,6 +15,7 @@ import {
   QuoteIcon,
   ScrollText,
   Landmark,
+  HeartHandshake,
 } from "lucide-react";
 
 import { NavNotes } from "@/components/nav-notes";
@@ -112,6 +113,11 @@ const data = {
       title: "Daily Quote",
       url: "/quote",
       icon: Landmark,
+    },
+    {
+      title: "Meditation",
+      url: "/meditation",
+      icon: HeartHandshake,
     },
     {
       title: "Calendar",
