@@ -1,6 +1,7 @@
 "use client";
 
 import * as React from "react";
+import { useRouter } from "next/navigation";
 import { ChevronDown, Plus } from "lucide-react";
 
 import {
@@ -25,13 +26,22 @@ export function TeamSwitcher({
     name: string;
     logo: React.ElementType;
     plan: string;
+    url?: string;
   }[];
 }) {
+  const router = useRouter();
   const [activeTeam, setActiveTeam] = React.useState(teams[0]);
 
   if (!activeTeam) {
     return null;
   }
+
+  const handleTeamClick = (team: typeof teams[0]) => {
+    setActiveTeam(team);
+    if (team.url) {
+      router.push(team.url);
+    }
+  };
 
   return (
     <SidebarMenu>
@@ -58,7 +68,7 @@ export function TeamSwitcher({
             {teams.map((team, index) => (
               <DropdownMenuItem
                 key={team.name}
-                onClick={() => setActiveTeam(team)}
+                onClick={() => handleTeamClick(team)}
                 className="gap-2 p-2"
               >
                 <div className="flex size-6 items-center justify-center rounded-full border overflow-hidden">
