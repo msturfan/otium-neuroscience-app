@@ -29,12 +29,12 @@ export default async function NeuroplasticityPage() {
       {/* Header Section */}
       <div className="space-y-4 text-center">
         <div className="flex items-center justify-center gap-3">
-          <Brain className="h-12 w-12 text-primary" />
+          <Brain className="text-primary h-12 w-12" />
           <h1 className="text-4xl font-bold text-gray-900 dark:text-gray-100">
             Neuroplasticity
           </h1>
         </div>
-        <p className="text-xl text-muted-foreground">
+        <p className="text-muted-foreground text-xl">
           {greeting}, {userName}! 👋
         </p>
       </div>
@@ -47,14 +47,15 @@ export default async function NeuroplasticityPage() {
             Feature Coming Soon
           </CardTitle>
           <CardDescription>
-            We're working hard to bring you an amazing neuroplasticity experience
+            We're working hard to bring you an amazing neuroplasticity
+            experience
           </CardDescription>
         </CardHeader>
         <CardContent>
           <p className="text-muted-foreground leading-relaxed">
-            This feature is currently under development. We're building something
-            special that will help you understand and harness the power of
-            neuroplasticity in your daily life. Stay tuned for updates!
+            This feature is currently under development. We're building
+            something special that will help you understand and harness the
+            power of neuroplasticity in your daily life. Stay tuned for updates!
           </p>
         </CardContent>
       </Card>
@@ -66,10 +67,10 @@ export default async function NeuroplasticityPage() {
         </CardHeader>
         <CardContent className="space-y-4">
           <p className="text-muted-foreground leading-relaxed">
-            <strong>Neuroplasticity</strong> is the brain's remarkable ability to
-            reorganize itself by forming new neural connections throughout life.
-            This means your brain is not fixed or static—it can change, adapt, and
-            grow based on your experiences, thoughts, and actions.
+            <strong>Neuroplasticity</strong> is the brain's remarkable ability
+            to reorganize itself by forming new neural connections throughout
+            life. This means your brain is not fixed or static—it can change,
+            adapt, and grow based on your experiences, thoughts, and actions.
           </p>
           <p className="text-muted-foreground leading-relaxed">
             Think of it as your brain's way of rewiring itself. Every time you
@@ -92,8 +93,8 @@ export default async function NeuroplasticityPage() {
               <h3 className="mb-2 font-semibold">1. Synaptic Plasticity</h3>
               <p className="text-muted-foreground leading-relaxed">
                 When you repeatedly use certain neural pathways, the connections
-                (synapses) between neurons become stronger. This is often described
-                as "neurons that fire together, wire together."
+                (synapses) between neurons become stronger. This is often
+                described as "neurons that fire together, wire together."
               </p>
             </div>
             <div>
@@ -105,7 +106,9 @@ export default async function NeuroplasticityPage() {
               </p>
             </div>
             <div>
-              <h3 className="mb-2 font-semibold">3. Functional Reorganization</h3>
+              <h3 className="mb-2 font-semibold">
+                3. Functional Reorganization
+              </h3>
               <p className="text-muted-foreground leading-relaxed">
                 If one part of your brain is damaged, other areas can take over
                 its functions. This is why people can recover abilities after
@@ -115,9 +118,9 @@ export default async function NeuroplasticityPage() {
             <div>
               <h3 className="mb-2 font-semibold">4. Experience-Dependent</h3>
               <p className="text-muted-foreground leading-relaxed">
-                The changes in your brain are driven by your experiences. The more
-                you practice, learn, and engage with new activities, the more your
-                brain adapts and grows.
+                The changes in your brain are driven by your experiences. The
+                more you practice, learn, and engage with new activities, the
+                more your brain adapts and grows.
               </p>
             </div>
           </div>
@@ -133,14 +136,13 @@ export default async function NeuroplasticityPage() {
           <p className="text-muted-foreground leading-relaxed">
             Understanding neuroplasticity empowers you to take control of your
             brain's development. By engaging in activities like learning new
-            skills, practicing mindfulness, exercising regularly, and maintaining
-            social connections, you can actively shape your brain's structure and
-            function. This means you're never too old to learn, change, or improve
-            your cognitive abilities.
+            skills, practicing mindfulness, exercising regularly, and
+            maintaining social connections, you can actively shape your brain's
+            structure and function. This means you're never too old to learn,
+            change, or improve your cognitive abilities.
           </p>
         </CardContent>
       </Card>
     </div>
   );
 }
-
