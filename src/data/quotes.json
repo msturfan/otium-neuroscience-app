@@ -1,0 +1,802 @@
+[
+  {
+    "text": "The happiness of your life depends upon the quality of your thoughts.",
+    "author": "Marcus Aurelius"
+  },
+  {
+    "text": "We suffer more often in imagination than in reality.",
+    "author": "Seneca"
+  },
+  {
+    "text": "First say to yourself what you would be; and then do what you have to do.",
+    "author": "Epictetus"
+  },
+  {
+    "text": "Knowing yourself is the beginning of all wisdom.",
+    "author": "Aristotle"
+  },
+  {
+    "text": "The unexamined life is not worth living.",
+    "author": "Socrates"
+  },
+  {
+    "text": "Silence is a source of great strength.",
+    "author": "Lao Tzu"
+  },
+  {
+    "text": "Nature does not hurry, yet everything is accomplished.",
+    "author": "Lao Tzu"
+  },
+  {
+    "text": "Do not dwell in the past, do not dream of the future, concentrate the mind on the present moment.",
+    "author": "Buddha"
+  },
+  {
+    "text": "Peace comes from within. Do not seek it without.",
+    "author": "Buddha"
+  },
+  {
+    "text": "The superior man is modest in his speech, but exceeds in his actions.",
+    "author": "Confucius"
+  },
+  {
+    "text": "It does not matter how slowly you go as long as you do not stop.",
+    "author": "Confucius"
+  },
+  {
+    "text": "He who opens a school door, closes a prison.",
+    "author": "Victor Hugo"
+  },
+  {
+    "text": "Well done is better than well said.",
+    "author": "Benjamin Franklin"
+  },
+  {
+    "text": "An investment in knowledge pays the best interest.",
+    "author": "Benjamin Franklin"
+  },
+  {
+    "text": "In the middle of every difficulty lies opportunity.",
+    "author": "Albert Einstein"
+  },
+  {
+    "text": "Life is really simple, but we insist on making it complicated.",
+    "author": "Confucius"
+  },
+  {
+    "text": "Man is the measure of all things.",
+    "author": "Protagoras"
+  },
+  {
+    "text": "Time is the most valuable thing a man can spend.",
+    "author": "Theophrastus"
+  },
+  {
+    "text": "He who has a why to live can bear almost any how.",
+    "author": "Friedrich Nietzsche"
+  },
+  {
+    "text": "That which does not kill us makes us stronger.",
+    "author": "Friedrich Nietzsche"
+  },
+  {
+    "text": "The happiness of your life depends upon the quality of your thoughts.",
+    "author": "Marcus Aurelius"
+  },
+  {
+    "text": "We suffer more often in imagination than in reality.",
+    "author": "Seneca"
+  },
+  {
+    "text": "First say to yourself what you would be; and then do what you have to do.",
+    "author": "Epictetus"
+  },
+  {
+    "text": "Knowing yourself is the beginning of all wisdom.",
+    "author": "Aristotle"
+  },
+  {
+    "text": "The unexamined life is not worth living.",
+    "author": "Socrates"
+  },
+  {
+    "text": "Silence is a source of great strength.",
+    "author": "Lao Tzu"
+  },
+  {
+    "text": "Nature does not hurry, yet everything is accomplished.",
+    "author": "Lao Tzu"
+  },
+  {
+    "text": "Do not dwell in the past, do not dream of the future, concentrate the mind on the present moment.",
+    "author": "Buddha"
+  },
+  {
+    "text": "Peace comes from within. Do not seek it without.",
+    "author": "Buddha"
+  },
+  {
+    "text": "The superior man is modest in his speech, but exceeds in his actions.",
+    "author": "Confucius"
+  },
+  {
+    "text": "It does not matter how slowly you go as long as you do not stop.",
+    "author": "Confucius"
+  },
+  {
+    "text": "He who opens a school door, closes a prison.",
+    "author": "Victor Hugo"
+  },
+  {
+    "text": "Well done is better than well said.",
+    "author": "Benjamin Franklin"
+  },
+  {
+    "text": "An investment in knowledge pays the best interest.",
+    "author": "Benjamin Franklin"
+  },
+  {
+    "text": "In the middle of every difficulty lies opportunity.",
+    "author": "Albert Einstein"
+  },
+  {
+    "text": "Life is really simple, but we insist on making it complicated.",
+    "author": "Confucius"
+  },
+  {
+    "text": "Man is the measure of all things.",
+    "author": "Protagoras"
+  },
+  {
+    "text": "Time is the most valuable thing a man can spend.",
+    "author": "Theophrastus"
+  },
+  {
+    "text": "He who has a why to live can bear almost any how.",
+    "author": "Friedrich Nietzsche"
+  },
+  {
+    "text": "That which does not kill us makes us stronger.",
+    "author": "Friedrich Nietzsche"
+  },
+  {
+    "text": "The happiness of your life depends upon the quality of your thoughts.",
+    "author": "Marcus Aurelius"
+  },
+  {
+    "text": "We suffer more often in imagination than in reality.",
+    "author": "Seneca"
+  },
+  {
+    "text": "First say to yourself what you would be; and then do what you have to do.",
+    "author": "Epictetus"
+  },
+  {
+    "text": "Knowing yourself is the beginning of all wisdom.",
+    "author": "Aristotle"
+  },
+  {
+    "text": "The unexamined life is not worth living.",
+    "author": "Socrates"
+  },
+  {
+    "text": "Silence is a source of great strength.",
+    "author": "Lao Tzu"
+  },
+  {
+    "text": "Nature does not hurry, yet everything is accomplished.",
+    "author": "Lao Tzu"
+  },
+  {
+    "text": "Do not dwell in the past, do not dream of the future, concentrate the mind on the present moment.",
+    "author": "Buddha"
+  },
+  {
+    "text": "Peace comes from within. Do not seek it without.",
+    "author": "Buddha"
+  },
+  {
+    "text": "The superior man is modest in his speech, but exceeds in his actions.",
+    "author": "Confucius"
+  },
+  {
+    "text": "It does not matter how slowly you go as long as you do not stop.",
+    "author": "Confucius"
+  },
+  {
+    "text": "He who opens a school door, closes a prison.",
+    "author": "Victor Hugo"
+  },
+  {
+    "text": "Well done is better than well said.",
+    "author": "Benjamin Franklin"
+  },
+  {
+    "text": "An investment in knowledge pays the best interest.",
+    "author": "Benjamin Franklin"
+  },
+  {
+    "text": "In the middle of every difficulty lies opportunity.",
+    "author": "Albert Einstein"
+  },
+  {
+    "text": "Life is really simple, but we insist on making it complicated.",
+    "author": "Confucius"
+  },
+  {
+    "text": "Man is the measure of all things.",
+    "author": "Protagoras"
+  },
+  {
+    "text": "Time is the most valuable thing a man can spend.",
+    "author": "Theophrastus"
+  },
+  {
+    "text": "He who has a why to live can bear almost any how.",
+    "author": "Friedrich Nietzsche"
+  },
+  {
+    "text": "That which does not kill us makes us stronger.",
+    "author": "Friedrich Nietzsche"
+  },
+  {
+    "text": "The happiness of your life depends upon the quality of your thoughts.",
+    "author": "Marcus Aurelius"
+  },
+  {
+    "text": "We suffer more often in imagination than in reality.",
+    "author": "Seneca"
+  },
+  {
+    "text": "First say to yourself what you would be; and then do what you have to do.",
+    "author": "Epictetus"
+  },
+  {
+    "text": "Knowing yourself is the beginning of all wisdom.",
+    "author": "Aristotle"
+  },
+  {
+    "text": "The unexamined life is not worth living.",
+    "author": "Socrates"
+  },
+  {
+    "text": "Silence is a source of great strength.",
+    "author": "Lao Tzu"
+  },
+  {
+    "text": "Nature does not hurry, yet everything is accomplished.",
+    "author": "Lao Tzu"
+  },
+  {
+    "text": "Do not dwell in the past, do not dream of the future, concentrate the mind on the present moment.",
+    "author": "Buddha"
+  },
+  {
+    "text": "Peace comes from within. Do not seek it without.",
+    "author": "Buddha"
+  },
+  {
+    "text": "The superior man is modest in his speech, but exceeds in his actions.",
+    "author": "Confucius"
+  },
+  {
+    "text": "It does not matter how slowly you go as long as you do not stop.",
+    "author": "Confucius"
+  },
+  {
+    "text": "He who opens a school door, closes a prison.",
+    "author": "Victor Hugo"
+  },
+  {
+    "text": "Well done is better than well said.",
+    "author": "Benjamin Franklin"
+  },
+  {
+    "text": "An investment in knowledge pays the best interest.",
+    "author": "Benjamin Franklin"
+  },
+  {
+    "text": "In the middle of every difficulty lies opportunity.",
+    "author": "Albert Einstein"
+  },
+  {
+    "text": "Life is really simple, but we insist on making it complicated.",
+    "author": "Confucius"
+  },
+  {
+    "text": "Man is the measure of all things.",
+    "author": "Protagoras"
+  },
+  {
+    "text": "Time is the most valuable thing a man can spend.",
+    "author": "Theophrastus"
+  },
+  {
+    "text": "He who has a why to live can bear almost any how.",
+    "author": "Friedrich Nietzsche"
+  },
+  {
+    "text": "That which does not kill us makes us stronger.",
+    "author": "Friedrich Nietzsche"
+  },
+  {
+    "text": "The happiness of your life depends upon the quality of your thoughts.",
+    "author": "Marcus Aurelius"
+  },
+  {
+    "text": "We suffer more often in imagination than in reality.",
+    "author": "Seneca"
+  },
+  {
+    "text": "First say to yourself what you would be; and then do what you have to do.",
+    "author": "Epictetus"
+  },
+  {
+    "text": "Knowing yourself is the beginning of all wisdom.",
+    "author": "Aristotle"
+  },
+  {
+    "text": "The unexamined life is not worth living.",
+    "author": "Socrates"
+  },
+  {
+    "text": "Silence is a source of great strength.",
+    "author": "Lao Tzu"
+  },
+  {
+    "text": "Nature does not hurry, yet everything is accomplished.",
+    "author": "Lao Tzu"
+  },
+  {
+    "text": "Do not dwell in the past, do not dream of the future, concentrate the mind on the present moment.",
+    "author": "Buddha"
+  },
+  {
+    "text": "Peace comes from within. Do not seek it without.",
+    "author": "Buddha"
+  },
+  {
+    "text": "The superior man is modest in his speech, but exceeds in his actions.",
+    "author": "Confucius"
+  },
+  {
+    "text": "It does not matter how slowly you go as long as you do not stop.",
+    "author": "Confucius"
+  },
+  {
+    "text": "He who opens a school door, closes a prison.",
+    "author": "Victor Hugo"
+  },
+  {
+    "text": "Well done is better than well said.",
+    "author": "Benjamin Franklin"
+  },
+  {
+    "text": "An investment in knowledge pays the best interest.",
+    "author": "Benjamin Franklin"
+  },
+  {
+    "text": "In the middle of every difficulty lies opportunity.",
+    "author": "Albert Einstein"
+  },
+  {
+    "text": "Life is really simple, but we insist on making it complicated.",
+    "author": "Confucius"
+  },
+  {
+    "text": "Man is the measure of all things.",
+    "author": "Protagoras"
+  },
+  {
+    "text": "Time is the most valuable thing a man can spend.",
+    "author": "Theophrastus"
+  },
+  {
+    "text": "He who has a why to live can bear almost any how.",
+    "author": "Friedrich Nietzsche"
+  },
+  {
+    "text": "That which does not kill us makes us stronger.",
+    "author": "Friedrich Nietzsche"
+  },
+  {
+    "text": "The happiness of your life depends upon the quality of your thoughts.",
+    "author": "Marcus Aurelius"
+  },
+  {
+    "text": "We suffer more often in imagination than in reality.",
+    "author": "Seneca"
+  },
+  {
+    "text": "First say to yourself what you would be; and then do what you have to do.",
+    "author": "Epictetus"
+  },
+  {
+    "text": "Knowing yourself is the beginning of all wisdom.",
+    "author": "Aristotle"
+  },
+  {
+    "text": "The unexamined life is not worth living.",
+    "author": "Socrates"
+  },
+  {
+    "text": "Silence is a source of great strength.",
+    "author": "Lao Tzu"
+  },
+  {
+    "text": "Nature does not hurry, yet everything is accomplished.",
+    "author": "Lao Tzu"
+  },
+  {
+    "text": "Do not dwell in the past, do not dream of the future, concentrate the mind on the present moment.",
+    "author": "Buddha"
+  },
+  {
+    "text": "Peace comes from within. Do not seek it without.",
+    "author": "Buddha"
+  },
+  {
+    "text": "The superior man is modest in his speech, but exceeds in his actions.",
+    "author": "Confucius"
+  },
+  {
+    "text": "It does not matter how slowly you go as long as you do not stop.",
+    "author": "Confucius"
+  },
+  {
+    "text": "He who opens a school door, closes a prison.",
+    "author": "Victor Hugo"
+  },
+  {
+    "text": "Well done is better than well said.",
+    "author": "Benjamin Franklin"
+  },
+  {
+    "text": "An investment in knowledge pays the best interest.",
+    "author": "Benjamin Franklin"
+  },
+  {
+    "text": "In the middle of every difficulty lies opportunity.",
+    "author": "Albert Einstein"
+  },
+  {
+    "text": "Life is really simple, but we insist on making it complicated.",
+    "author": "Confucius"
+  },
+  {
+    "text": "Man is the measure of all things.",
+    "author": "Protagoras"
+  },
+  {
+    "text": "Time is the most valuable thing a man can spend.",
+    "author": "Theophrastus"
+  },
+  {
+    "text": "He who has a why to live can bear almost any how.",
+    "author": "Friedrich Nietzsche"
+  },
+  {
+    "text": "That which does not kill us makes us stronger.",
+    "author": "Friedrich Nietzsche"
+  },
+  {
+    "text": "The happiness of your life depends upon the quality of your thoughts.",
+    "author": "Marcus Aurelius"
+  },
+  {
+    "text": "We suffer more often in imagination than in reality.",
+    "author": "Seneca"
+  },
+  {
+    "text": "First say to yourself what you would be; and then do what you have to do.",
+    "author": "Epictetus"
+  },
+  {
+    "text": "Knowing yourself is the beginning of all wisdom.",
+    "author": "Aristotle"
+  },
+  {
+    "text": "The unexamined life is not worth living.",
+    "author": "Socrates"
+  },
+  {
+    "text": "Silence is a source of great strength.",
+    "author": "Lao Tzu"
+  },
+  {
+    "text": "Nature does not hurry, yet everything is accomplished.",
+    "author": "Lao Tzu"
+  },
+  {
+    "text": "Do not dwell in the past, do not dream of the future, concentrate the mind on the present moment.",
+    "author": "Buddha"
+  },
+  {
+    "text": "Peace comes from within. Do not seek it without.",
+    "author": "Buddha"
+  },
+  {
+    "text": "The superior man is modest in his speech, but exceeds in his actions.",
+    "author": "Confucius"
+  },
+  {
+    "text": "It does not matter how slowly you go as long as you do not stop.",
+    "author": "Confucius"
+  },
+  {
+    "text": "He who opens a school door, closes a prison.",
+    "author": "Victor Hugo"
+  },
+  {
+    "text": "Well done is better than well said.",
+    "author": "Benjamin Franklin"
+  },
+  {
+    "text": "An investment in knowledge pays the best interest.",
+    "author": "Benjamin Franklin"
+  },
+  {
+    "text": "In the middle of every difficulty lies opportunity.",
+    "author": "Albert Einstein"
+  },
+  {
+    "text": "Life is really simple, but we insist on making it complicated.",
+    "author": "Confucius"
+  },
+  {
+    "text": "Man is the measure of all things.",
+    "author": "Protagoras"
+  },
+  {
+    "text": "Time is the most valuable thing a man can spend.",
+    "author": "Theophrastus"
+  },
+  {
+    "text": "He who has a why to live can bear almost any how.",
+    "author": "Friedrich Nietzsche"
+  },
+  {
+    "text": "That which does not kill us makes us stronger.",
+    "author": "Friedrich Nietzsche"
+  },
+  {
+    "text": "The happiness of your life depends upon the quality of your thoughts.",
+    "author": "Marcus Aurelius"
+  },
+  {
+    "text": "We suffer more often in imagination than in reality.",
+    "author": "Seneca"
+  },
+  {
+    "text": "First say to yourself what you would be; and then do what you have to do.",
+    "author": "Epictetus"
+  },
+  {
+    "text": "Knowing yourself is the beginning of all wisdom.",
+    "author": "Aristotle"
+  },
+  {
+    "text": "The unexamined life is not worth living.",
+    "author": "Socrates"
+  },
+  {
+    "text": "Silence is a source of great strength.",
+    "author": "Lao Tzu"
+  },
+  {
+    "text": "Nature does not hurry, yet everything is accomplished.",
+    "author": "Lao Tzu"
+  },
+  {
+    "text": "Do not dwell in the past, do not dream of the future, concentrate the mind on the present moment.",
+    "author": "Buddha"
+  },
+  {
+    "text": "Peace comes from within. Do not seek it without.",
+    "author": "Buddha"
+  },
+  {
+    "text": "The superior man is modest in his speech, but exceeds in his actions.",
+    "author": "Confucius"
+  },
+  {
+    "text": "It does not matter how slowly you go as long as you do not stop.",
+    "author": "Confucius"
+  },
+  {
+    "text": "He who opens a school door, closes a prison.",
+    "author": "Victor Hugo"
+  },
+  {
+    "text": "Well done is better than well said.",
+    "author": "Benjamin Franklin"
+  },
+  {
+    "text": "An investment in knowledge pays the best interest.",
+    "author": "Benjamin Franklin"
+  },
+  {
+    "text": "In the middle of every difficulty lies opportunity.",
+    "author": "Albert Einstein"
+  },
+  {
+    "text": "Life is really simple, but we insist on making it complicated.",
+    "author": "Confucius"
+  },
+  {
+    "text": "Man is the measure of all things.",
+    "author": "Protagoras"
+  },
+  {
+    "text": "Time is the most valuable thing a man can spend.",
+    "author": "Theophrastus"
+  },
+  {
+    "text": "He who has a why to live can bear almost any how.",
+    "author": "Friedrich Nietzsche"
+  },
+  {
+    "text": "That which does not kill us makes us stronger.",
+    "author": "Friedrich Nietzsche"
+  },
+  {
+    "text": "The happiness of your life depends upon the quality of your thoughts.",
+    "author": "Marcus Aurelius"
+  },
+  {
+    "text": "We suffer more often in imagination than in reality.",
+    "author": "Seneca"
+  },
+  {
+    "text": "First say to yourself what you would be; and then do what you have to do.",
+    "author": "Epictetus"
+  },
+  {
+    "text": "Knowing yourself is the beginning of all wisdom.",
+    "author": "Aristotle"
+  },
+  {
+    "text": "The unexamined life is not worth living.",
+    "author": "Socrates"
+  },
+  {
+    "text": "Silence is a source of great strength.",
+    "author": "Lao Tzu"
+  },
+  {
+    "text": "Nature does not hurry, yet everything is accomplished.",
+    "author": "Lao Tzu"
+  },
+  {
+    "text": "Do not dwell in the past, do not dream of the future, concentrate the mind on the present moment.",
+    "author": "Buddha"
+  },
+  {
+    "text": "Peace comes from within. Do not seek it without.",
+    "author": "Buddha"
+  },
+  {
+    "text": "The superior man is modest in his speech, but exceeds in his actions.",
+    "author": "Confucius"
+  },
+  {
+    "text": "It does not matter how slowly you go as long as you do not stop.",
+    "author": "Confucius"
+  },
+  {
+    "text": "He who opens a school door, closes a prison.",
+    "author": "Victor Hugo"
+  },
+  {
+    "text": "Well done is better than well said.",
+    "author": "Benjamin Franklin"
+  },
+  {
+    "text": "An investment in knowledge pays the best interest.",
+    "author": "Benjamin Franklin"
+  },
+  {
+    "text": "In the middle of every difficulty lies opportunity.",
+    "author": "Albert Einstein"
+  },
+  {
+    "text": "Life is really simple, but we insist on making it complicated.",
+    "author": "Confucius"
+  },
+  {
+    "text": "Man is the measure of all things.",
+    "author": "Protagoras"
+  },
+  {
+    "text": "Time is the most valuable thing a man can spend.",
+    "author": "Theophrastus"
+  },
+  {
+    "text": "He who has a why to live can bear almost any how.",
+    "author": "Friedrich Nietzsche"
+  },
+  {
+    "text": "That which does not kill us makes us stronger.",
+    "author": "Friedrich Nietzsche"
+  },
+  {
+    "text": "The happiness of your life depends upon the quality of your thoughts.",
+    "author": "Marcus Aurelius"
+  },
+  {
+    "text": "We suffer more often in imagination than in reality.",
+    "author": "Seneca"
+  },
+  {
+    "text": "First say to yourself what you would be; and then do what you have to do.",
+    "author": "Epictetus"
+  },
+  {
+    "text": "Knowing yourself is the beginning of all wisdom.",
+    "author": "Aristotle"
+  },
+  {
+    "text": "The unexamined life is not worth living.",
+    "author": "Socrates"
+  },
+  {
+    "text": "Silence is a source of great strength.",
+    "author": "Lao Tzu"
+  },
+  {
+    "text": "Nature does not hurry, yet everything is accomplished.",
+    "author": "Lao Tzu"
+  },
+  {
+    "text": "Do not dwell in the past, do not dream of the future, concentrate the mind on the present moment.",
+    "author": "Buddha"
+  },
+  {
+    "text": "Peace comes from within. Do not seek it without.",
+    "author": "Buddha"
+  },
+  {
+    "text": "The superior man is modest in his speech, but exceeds in his actions.",
+    "author": "Confucius"
+  },
+  {
+    "text": "It does not matter how slowly you go as long as you do not stop.",
+    "author": "Confucius"
+  },
+  {
+    "text": "He who opens a school door, closes a prison.",
+    "author": "Victor Hugo"
+  },
+  {
+    "text": "Well done is better than well said.",
+    "author": "Benjamin Franklin"
+  },
+  {
+    "text": "An investment in knowledge pays the best interest.",
+    "author": "Benjamin Franklin"
+  },
+  {
+    "text": "In the middle of every difficulty lies opportunity.",
+    "author": "Albert Einstein"
+  },
+  {
+    "text": "Life is really simple, but we insist on making it complicated.",
+    "author": "Confucius"
+  },
+  {
+    "text": "Man is the measure of all things.",
+    "author": "Protagoras"
+  },
+  {
+    "text": "Time is the most valuable thing a man can spend.",
+    "author": "Theophrastus"
+  },
+  {
+    "text": "He who has a why to live can bear almost any how.",
+    "author": "Friedrich Nietzsche"
+  },
+  {
+    "text": "That which does not kill us makes us stronger.",
+    "author": "Friedrich Nietzsche"
+  }
+]
