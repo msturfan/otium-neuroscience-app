@@ -3,18 +3,13 @@
 import * as React from "react";
 import Image from "next/image";
 import {
-  AudioWaveform,
   Brain,
   Calendar,
   Command,
-  Notebook,
   Edit,
   Inbox,
   MessageCircleQuestion,
-  Settings2,
   Sparkles,
-  QuoteIcon,
-  ScrollText,
   Landmark,
   HeartHandshake,
 } from "lucide-react";
@@ -33,7 +28,6 @@ import {
   SidebarRail,
 } from "@/components/ui/sidebar";
 import { User } from "@supabase/supabase-js";
-import { IconQuoteFilled } from "@tabler/icons-react";
 
 // Custom logo component for Otium
 const OtiumLogo = ({ className }: { className?: string }) => (
@@ -118,11 +112,6 @@ const data = {
       icon: Calendar,
     },
     {
-      title: "Settings",
-      url: "#",
-      icon: Settings2,
-    },
-    {
       title: "Help",
       url: "/help",
       icon: MessageCircleQuestion,
@@ -147,10 +136,12 @@ export function AppSidebar({
     initials: user?.email?.[0].toUpperCase() || "G",
   };
 
-  // Filter navSecondary to only show Calendar for logged-in users
+  // Filter navSecondary to only show Calendar and Settings for logged-in users
   const navSecondaryFiltered = user
     ? data.navSecondary
-    : data.navSecondary.filter((item) => item.title !== "Calendar");
+    : data.navSecondary.filter(
+        (item) => item.title !== "Calendar" && item.title !== "Settings"
+      );
 
   return (
     <Sidebar className="border-r-0" {...props}>
@@ -166,7 +157,7 @@ export function AppSidebar({
         <NavSecondary items={navSecondaryFiltered} className="mt-auto" />
       </SidebarContent>
       <SidebarFooter>
-        <NavUser user={displayUser} />
+        <NavUser user={displayUser} isGuest={!user} />
       </SidebarFooter>
       <SidebarRail />
     </Sidebar>
