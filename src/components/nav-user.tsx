@@ -3,9 +3,11 @@
 import {
   IconCreditCard,
   IconDotsVertical,
+  IconLogin,
   IconLogout,
   IconNotification,
   IconUserCircle,
+  IconUserPlus,
 } from "@tabler/icons-react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
@@ -32,6 +34,7 @@ import {
 
 export function NavUser({
   user,
+  isGuest = false,
 }: {
   user: {
     name: string;
@@ -39,6 +42,7 @@ export function NavUser({
     avatar: string;
     initials?: string;
   };
+  isGuest?: boolean;
 }) {
   const { isMobile } = useSidebar();
   const router = useRouter();
@@ -107,29 +111,48 @@ export function NavUser({
               </div>
             </DropdownMenuLabel>
             <DropdownMenuSeparator />
-            <DropdownMenuGroup>
-              <DropdownMenuItem asChild>
-                <Link href="/account" className="flex items-center">
-                  <IconUserCircle />
-                  Account
-                </Link>
-              </DropdownMenuItem>
-              <DropdownMenuItem asChild>
-                <Link href="/billing" className="flex items-center">
-                  <IconCreditCard />
-                  Billing
-                </Link>
-              </DropdownMenuItem>
-              <DropdownMenuItem>
-                <IconNotification />
-                Notifications
-              </DropdownMenuItem>
-            </DropdownMenuGroup>
-            <DropdownMenuSeparator />
-            <DropdownMenuItem onClick={handleSignOut} disabled={isLoggingOut}>
-              <IconLogout />
-              {isLoggingOut ? "Logging out..." : "Log out"}
-            </DropdownMenuItem>
+            {isGuest ? (
+              <DropdownMenuGroup>
+                <DropdownMenuItem asChild>
+                  <Link href="/login" className="flex items-center">
+                    <IconLogin />
+                    Login
+                  </Link>
+                </DropdownMenuItem>
+                <DropdownMenuItem asChild>
+                  <Link href="/sign-up" className="flex items-center">
+                    <IconUserPlus />
+                    Sign up
+                  </Link>
+                </DropdownMenuItem>
+              </DropdownMenuGroup>
+            ) : (
+              <>
+                <DropdownMenuGroup>
+                  <DropdownMenuItem asChild>
+                    <Link href="/account" className="flex items-center">
+                      <IconUserCircle />
+                      Account
+                    </Link>
+                  </DropdownMenuItem>
+                  <DropdownMenuItem asChild>
+                    <Link href="/billing" className="flex items-center">
+                      <IconCreditCard />
+                      Billing
+                    </Link>
+                  </DropdownMenuItem>
+                  <DropdownMenuItem>
+                    <IconNotification />
+                    Notifications
+                  </DropdownMenuItem>
+                </DropdownMenuGroup>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem onClick={handleSignOut} disabled={isLoggingOut}>
+                  <IconLogout />
+                  {isLoggingOut ? "Logging out..." : "Log out"}
+                </DropdownMenuItem>
+              </>
+            )}
           </DropdownMenuContent>
         </DropdownMenu>
       </SidebarMenuItem>
