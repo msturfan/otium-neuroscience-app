@@ -1,5 +1,6 @@
 "use client";
 
+import { usePathname } from "next/navigation";
 import { type LucideIcon } from "lucide-react";
 
 import {
@@ -18,11 +19,26 @@ export function NavMain({
     isActive?: boolean;
   }[];
 }) {
+  const pathname = usePathname();
+
+  const isItemActive = (url: string) => {
+    // Handle root path - only active when pathname is exactly "/"
+    if (url === "/") {
+      return pathname === "/";
+    }
+    // Handle hash/anchor links - never active
+    if (url === "#") {
+      return false;
+    }
+    // For other paths, check if pathname starts with the URL
+    return pathname.startsWith(url);
+  };
+
   return (
     <SidebarMenu>
       {items.map((item) => (
         <SidebarMenuItem key={item.title}>
-          <SidebarMenuButton asChild isActive={item.isActive}>
+          <SidebarMenuButton asChild isActive={isItemActive(item.url)}>
             <a href={item.url}>
               <item.icon />
               <span>{item.title}</span>

@@ -86,7 +86,6 @@ const data = {
       title: "New note",
       url: "/",
       icon: Edit,
-      isActive: true,
     },
     {
       title: "Inbox",
