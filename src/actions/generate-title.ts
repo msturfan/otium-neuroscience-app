@@ -63,7 +63,7 @@ export async function generateNoteTitle(
     cleanTitle = lines[0].trim();
 
     // Split into words and enforce maximum 5 words
-    const words = cleanTitle.split(/\s+/).filter((word) => word.length > 0);
+    const words = cleanTitle.split(/\s+/).filter((word: string) => word.length > 0);
 
     // Take only first 5 words maximum
     if (words.length > 5) {
@@ -82,7 +82,7 @@ export async function generateNoteTitle(
     // Capitalize first letter of each word (title case)
     cleanTitle = cleanTitle
       .split(" ")
-      .map((word) => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
+      .map((word: string) => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
       .join(" ");
 
     return cleanTitle || null;
