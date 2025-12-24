@@ -45,7 +45,7 @@ export default function NoteTextInput({
     setNoteText: (t: string) => void;
     guestNotes: GuestNote[];
     addGuestNote: (n: GuestNote) => void;
-    updateGuestNote: (id: string, text: string) => void;
+    updateGuestNote: (id: string, text: string, title?: string | null) => void;
   } = useNote();
 
   const textareaRef = useRef<HTMLTextAreaElement | null>(null);
