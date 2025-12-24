@@ -1,6 +1,5 @@
 "use client";
 
-import { useState } from "react";
 import type { JSX } from "react";
 import {
   Card,
@@ -43,9 +42,6 @@ type CalendarDisplayProps = {
 export default function CalendarDisplay({
   birthdate,
 }: CalendarDisplayProps): JSX.Element {
-  const [showHoverData, setShowHoverData] = useState<boolean>(false);
-  const [hoverWeek, setHoverWeek] = useState<number | null>(null);
-
   // Convert Date to YYYY-MM-DD string
   const dateString = birthdate.toISOString().split("T")[0];
 
@@ -157,17 +153,7 @@ export default function CalendarDisplay({
         cellClass += "bg-gray-200 dark:bg-gray-700 ";
       }
 
-      weekCells.push(
-        <div
-          key={weekNumber}
-          className={cellClass}
-          onMouseEnter={() => {
-            setHoverWeek(weekNumber);
-            setShowHoverData(true);
-          }}
-          onMouseLeave={() => setShowHoverData(false)}
-        />,
-      );
+      weekCells.push(<div key={weekNumber} className={cellClass} />);
     }
 
     return (
@@ -175,22 +161,12 @@ export default function CalendarDisplay({
         <CardHeader>
           <CardTitle>The Weeks of Your Life</CardTitle>
           <CardDescription>
-          Every square is a week you can never reclaim. Spend what remains with care.
+            Every square is a week you can never reclaim. Spend what remains
+            with care.
           </CardDescription>
         </CardHeader>
         <CardContent>
           <div className="flex flex-wrap gap-0.5">{weekCells}</div>
-
-          {showHoverData && hoverWeek !== null && (
-            <div className="text-muted-foreground mt-4 text-sm">
-              Week {hoverWeek + 1}:
-              {hoverWeek < stats.weeksLived
-                ? " A week from your past"
-                : hoverWeek === stats.weeksLived
-                  ? " Your current week"
-                  : " A week in your potential future"}
-            </div>
-          )}
 
           <div className="mt-6 flex gap-4 text-sm">
             <div className="flex items-center gap-2">
@@ -227,7 +203,8 @@ export default function CalendarDisplay({
           <div className="mb-0">
             <h1 className="mb-0 text-3xl font-semibold">Your Timeline</h1>
             <p className="text-muted-foreground">
-            Past weeks are set in ink, this one shines in the moment, the rest are blank pages.
+              Past weeks are set in ink, this one shines in the moment, the rest
+              are blank pages.
             </p>
           </div>
 
