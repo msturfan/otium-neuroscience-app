@@ -7,14 +7,15 @@ import NoteTextInput from "@/components/NoteTextInput";
 import { getServerSideGreeting } from "@/lib/greetings-server";
 
 type Props = {
-  searchParams?: { [key: string]: string | string[] | undefined };
+  searchParams?: Promise<Record<string, string | string[] | undefined>>;
 };
 
 export default async function HomePage({ searchParams }: Props) {
   const user = await getUser();
   const greeting = getServerSideGreeting();
 
-  const noteIdParam = searchParams?.noteId;
+  const sp = (await searchParams) ?? {};
+  const noteIdParam = sp.noteId;
   const noteId = Array.isArray(noteIdParam)
     ? noteIdParam[0]
     : noteIdParam || "";
