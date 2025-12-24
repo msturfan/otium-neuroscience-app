@@ -10,11 +10,10 @@ export default function NotFound() {
       </p>
       <Link
         href="/"
-        className="rounded-md bg-primary px-4 py-2 text-primary-foreground hover:bg-primary/90"
+        className="bg-primary text-primary-foreground hover:bg-primary/90 rounded-md px-4 py-2"
       >
         Return Home
       </Link>
     </div>
   );
 }
-
