@@ -1,10 +1,10 @@
 "use client";
 
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, Suspense } from "react";
 import { useSearchParams } from "next/navigation";
 import { toast } from "sonner";
 
-function LoginToaster() {
+function LoginToasterContent() {
   const searchParams = useSearchParams();
   const verified = searchParams.get("verified");
   const error = searchParams.get("error");
@@ -57,6 +57,14 @@ function LoginToaster() {
   }, [verified, error]);
 
   return null;
+}
+
+function LoginToaster() {
+  return (
+    <Suspense fallback={null}>
+      <LoginToasterContent />
+    </Suspense>
+  );
 }
 
 export default LoginToaster;

@@ -2,7 +2,7 @@
 
 import { toast } from "sonner";
 import { useSearchParams } from "next/navigation";
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, Suspense } from "react";
 
 type ToastVariant = "success" | "error" | "info" | "warning";
 
@@ -41,7 +41,7 @@ function isToastType(value: string | null): value is ToastType {
   return value !== null && value in TOAST_CONFIG;
 }
 
-function HomeToaster() {
+function HomeToasterContent() {
   const toastType = useSearchParams().get("toastType");
   const shownToastsRef = useRef<Set<string>>(new Set());
 
@@ -100,6 +100,14 @@ function HomeToaster() {
   }, [toastType]);
 
   return null;
+}
+
+function HomeToaster() {
+  return (
+    <Suspense fallback={null}>
+      <HomeToasterContent />
+    </Suspense>
+  );
 }
 
 export default HomeToaster;
