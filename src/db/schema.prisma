@@ -4,24 +4,24 @@ generator client {
 
 datasource db {
   provider = "postgresql"
-  url = env("DATABASE_URL")
+  url      = env("DATABASE_URL")
 }
 
 model Note {
   id        String   @id @default(uuid())
   text      String
-  title     String?
   token     String   @unique @default(uuid())
   authorId  String
   createdAt DateTime @default(now())
   updatedAt DateTime @default(now()) @updatedAt
+  title     String?
   author    User     @relation(fields: [authorId], references: [id])
 }
 
 model WeeklyStreak {
   id        String   @id @default(uuid())
   userId    String
-  weekStart DateTime // Sunday 00:00 of the week in user's timezone
+  weekStart DateTime
   sunday    Boolean  @default(false)
   monday    Boolean  @default(false)
   tuesday   Boolean  @default(false)
@@ -32,51 +32,84 @@ model WeeklyStreak {
   createdAt DateTime @default(now())
   updatedAt DateTime @default(now()) @updatedAt
   user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  
+
   @@unique([userId, weekStart])
   @@index([userId])
 }
 
 model UserStreakHistory {
   id          String   @id @default(uuid())
-  userId      String
-  bestStreak  Int      @default(0) // Best consecutive days in a week (max 7)
-  totalWeeks  Int      @default(0) // Total number of completed weeks
+  userId      String   @unique
+  bestStreak  Int      @default(0)
+  totalWeeks  Int      @default(0)
   lastUpdated DateTime @default(now()) @updatedAt
   user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  
-  @@unique([userId])
+
   @@index([userId])
 }
 
 model WeeklyReport {
   id          String   @id @default(uuid())
   userId      String
-  weekStart   DateTime // Sunday 00:00 of the week in user's timezone
-  reportText  String   @db.Text
+  weekStart   DateTime
+  reportText  String
   generatedAt DateTime @default(now())
   createdAt   DateTime @default(now())
   updatedAt   DateTime @default(now()) @updatedAt
   user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  
+
   @@unique([userId, weekStart])
   @@index([userId])
   @@index([weekStart])
 }
 
 model User {
-  id        String   @id @default(uuid())
-  email     String   @unique
-  firstName String?
-  lastName  String?
-  dob       DateTime?
-  timezone  String?  @default("UTC") // IANA timezone (e.g., "America/New_York")
-  isGuest   Boolean  @default(false)
-  createdAt DateTime @default(now())
-  updatedAt DateTime @default(now()) @updatedAt
-  notes     Note[]
+  id            String             @id @default(uuid())
+  email         String             @unique
+  firstName     String?
+  lastName      String?
+  isGuest       Boolean            @default(false)
+  createdAt     DateTime           @default(now())
+  updatedAt     DateTime           @default(now()) @updatedAt
+  dob           DateTime?
+  timezone      String?            @default("UTC")
+  notes         Note[]
+  streakHistory UserStreakHistory?
+  weeklyReports WeeklyReport[]
+  weeklyStreaks WeeklyStreak[]
+}
 
-  weeklyStreaks     WeeklyStreak[]
-  streakHistory     UserStreakHistory?
-  weeklyReports     WeeklyReport[]
+model RateLimitAttempt {
+  id                  String    @id @default(uuid())
+  identifier          String
+  actionType          String
+  attemptCount        Int       @default(1)
+  consecutiveLockouts Int       @default(0)
+  lockedUntil         DateTime?
+  lastAttempt         DateTime  @default(now())
+  requiresCaptcha     Boolean   @default(false)
+  createdAt           DateTime  @default(now())
+  updatedAt           DateTime  @default(now()) @updatedAt
+
+  @@unique([identifier, actionType])
+  @@index([identifier])
+  @@index([actionType])
+  @@index([lockedUntil])
+}
+
+model SecurityAuditLog {
+  id            String   @id @default(uuid())
+  eventType     String
+  ipAddress     String
+  email         String?
+  userAgent     String?
+  country       String?
+  failureReason String?
+  metadata      String?
+  createdAt     DateTime @default(now())
+
+  @@index([eventType])
+  @@index([ipAddress])
+  @@index([email])
+  @@index([createdAt])
 }

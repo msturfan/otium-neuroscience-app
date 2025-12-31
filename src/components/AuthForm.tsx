@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { CardContent, CardDescription, CardHeader, CardTitle } from "./ui/card";
 import { Label } from "./ui/label";
 import { Input } from "./ui/input";
-import { useTransition, useState } from "react";
+import { useTransition, useState, useCallback } from "react";
 import { Button } from "./ui/button";
 import { Loader2, Eye, EyeOff } from "lucide-react";
 import Link from "next/link";
@@ -13,6 +13,7 @@ import { loginAction, signUpAction } from "@/actions/users";
 import { cn } from "@/lib/utils";
 import PasswordStrengthIndicator from "./PasswordStrengthIndicator";
 import { DateOfBirthPicker } from "./DateOfBirthPicker";
+import TurnstileCaptcha from "./TurnstileCaptcha";
 
 type Props = {
   type: "login" | "signUp";
@@ -30,6 +31,31 @@ function AuthForm({ type, className, ...props }: Props) {
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [dob, setDob] = useState<Date | undefined>(undefined);
+  const [requiresCaptcha, setRequiresCaptcha] = useState(!isLoginForm); // Always require for signup
+  const [captchaToken, setCaptchaToken] = useState<string | null>(null);
+
+  const handleCaptchaVerify = useCallback((token: string) => {
+    console.log("✅ CAPTCHA verified, token received");
+    setCaptchaToken(token);
+  }, []);
+
+  const handleCaptchaError = useCallback(() => {
+    console.error("❌ CAPTCHA error");
+    setCaptchaToken(null);
+    setRequiresCaptcha(true); // Keep CAPTCHA visible on error
+    toast("CAPTCHA Error", {
+      description: "CAPTCHA verification failed. Please try again.",
+    });
+  }, []);
+
+  const handleCaptchaExpire = useCallback(() => {
+    console.warn("⚠️ CAPTCHA expired");
+    setCaptchaToken(null);
+    setRequiresCaptcha(true); // Keep CAPTCHA visible when expired
+    toast("CAPTCHA Expired", {
+      description: "CAPTCHA has expired. Please complete it again.",
+    });
+  }, []);
 
   const handleSubmit = (formData: FormData) => {
     startTransition(async () => {
@@ -38,6 +64,14 @@ function AuthForm({ type, className, ...props }: Props) {
         const passwordValue = formData.get("password") as string;
 
         if (!isLoginForm) {
+          // For signup, always require CAPTCHA
+          if (!captchaToken) {
+            toast("CAPTCHA Required", {
+              description: "Please complete the CAPTCHA verification.",
+            });
+            return;
+          }
+
           const firstName = formData.get("firstName") as string;
           const lastName = formData.get("lastName") as string;
           const confirmPasswordValue = formData.get(
@@ -65,7 +99,14 @@ function AuthForm({ type, className, ...props }: Props) {
             firstName,
             lastName,
             dob,
+            captchaToken, // Pass CAPTCHA token to server
           );
+
+          // Update CAPTCHA requirement based on server response
+          if (result?.requiresCaptcha) {
+            setRequiresCaptcha(true);
+            setCaptchaToken(null); // Reset token for next attempt
+          }
 
           if (!result?.errorMessage) {
             // Check if email verification is required
@@ -85,7 +126,33 @@ function AuthForm({ type, className, ...props }: Props) {
             });
           }
         } else {
-          const result = await loginAction(email, passwordValue);
+          // For login, CAPTCHA is only required after first failed attempt
+          // The server will tell us if CAPTCHA is required
+          const result = await loginAction(
+            email,
+            passwordValue,
+            captchaToken || undefined,
+          );
+
+          // Update CAPTCHA requirement based on server response
+          console.log("Login result:", {
+            requiresCaptcha: result?.requiresCaptcha,
+            errorMessage: result?.errorMessage,
+            tokenWasSent: !!captchaToken,
+          });
+
+          if (result?.requiresCaptcha) {
+            console.log("✅ CAPTCHA required - showing widget");
+            setRequiresCaptcha(true);
+            // Only reset token if there was an error
+            if (result?.errorMessage) {
+              setCaptchaToken(null); // Reset token for next attempt
+            }
+          } else {
+            // Clear CAPTCHA on successful login
+            setRequiresCaptcha(false);
+            setCaptchaToken(null);
+          }
 
           if (!result?.errorMessage) {
             router.replace(`/?toastType=${type}`);
@@ -309,7 +376,20 @@ function AuthForm({ type, className, ...props }: Props) {
                   )}
                 </div>
               )}
-              <Button type="submit" className="w-full" disabled={isPending}>
+              {requiresCaptcha && (
+                <div className="flex justify-center">
+                  <TurnstileCaptcha
+                    onVerify={handleCaptchaVerify}
+                    onError={handleCaptchaError}
+                    onExpire={handleCaptchaExpire}
+                  />
+                </div>
+              )}
+              <Button
+                type="submit"
+                className="w-full"
+                disabled={isPending || (requiresCaptcha && !captchaToken)}
+              >
                 {isPending ? (
                   <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                 ) : isLoginForm ? (
@@ -337,27 +417,29 @@ function AuthForm({ type, className, ...props }: Props) {
         </div>
       </CardContent>
 
-      <div className="text-muted-foreground text-center text-xs text-balance">
-        By clicking continue, you agree to our{" "}
-        <Link
-          href="/terms-of-service"
-          target="_blank"
-          rel="noopener noreferrer"
-          className="hover:text-primary underline underline-offset-4"
-        >
-          Terms of Service
-        </Link>{" "}
-        and{" "}
-        <Link
-          href="/privacy-policy"
-          target="_blank"
-          rel="noopener noreferrer"
-          className="hover:text-primary underline underline-offset-4"
-        >
-          Privacy Policy
-        </Link>
-        .
-      </div>
+      {!isLoginForm && (
+        <div className="text-muted-foreground text-center text-xs text-balance">
+          By clicking continue, you agree to our{" "}
+          <Link
+            href="/terms-of-service"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="hover:text-primary underline underline-offset-4"
+          >
+            Terms of Service
+          </Link>{" "}
+          and{" "}
+          <Link
+            href="/privacy-policy"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="hover:text-primary underline underline-offset-4"
+          >
+            Privacy Policy
+          </Link>
+          .
+        </div>
+      )}
     </div>
   );
 }

@@ -1,36 +1,69 @@
 "use client";
 
-import { useState } from "react";
-import { createClientComponentClient } from "@supabase/auth-helpers-nextjs";
+import { useState, useCallback } from "react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
+import { resetPasswordAction } from "@/actions/users";
+import TurnstileCaptcha from "./TurnstileCaptcha";
 
 export default function ForgotPasswordForm() {
   const [email, setEmail] = useState("");
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [requiresCaptcha, setRequiresCaptcha] = useState(true); // Always require CAPTCHA for password reset
+  const [captchaToken, setCaptchaToken] = useState<string | null>(null);
 
-  const supabase = createClientComponentClient();
+  const handleCaptchaVerify = useCallback((token: string) => {
+    setCaptchaToken(token);
+  }, []);
+
+  const handleCaptchaError = useCallback(() => {
+    setCaptchaToken(null);
+    setErrorMessage("CAPTCHA verification failed. Please try again.");
+  }, []);
+
+  const handleCaptchaExpire = useCallback(() => {
+    setCaptchaToken(null);
+  }, []);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
     setMessage(null);
+    setErrorMessage(null);
+
+    // Check if CAPTCHA is required but not verified
+    if (requiresCaptcha && !captchaToken) {
+      setErrorMessage("Please complete the CAPTCHA verification.");
+      setLoading(false);
+      return;
+    }
 
     try {
-      const redirectTo = `${window.location.origin}/update-password`;
-
-      const { error } = await supabase.auth.resetPasswordForEmail(email, {
-        redirectTo,
-      });
-
-      setMessage(
-        "If an account exists for that email, a reset link has been sent.",
+      const result = await resetPasswordAction(
+        email,
+        captchaToken || undefined,
       );
-      if (error) {
+
+      if (result.errorMessage) {
+        setErrorMessage(result.errorMessage);
+      } else if (result.success && result.message) {
+        setMessage(result.message);
+      } else {
+        setMessage(
+          "If an account exists for that email, a reset link has been sent.",
+        );
+      }
+
+      // Update CAPTCHA requirement based on server response
+      if (result.requiresCaptcha) {
+        setRequiresCaptcha(true);
+        setCaptchaToken(null); // Reset token for next attempt
       }
     } catch {
+      // Fallback message to prevent email enumeration
       setMessage(
         "If an account exists for that email, a reset link has been sent.",
       );
@@ -54,10 +87,27 @@ export default function ForgotPasswordForm() {
         />
       </div>
 
-      <Button type="submit" className="w-full" disabled={loading || !email}>
+      {requiresCaptcha && (
+        <div className="flex justify-center">
+          <TurnstileCaptcha
+            onVerify={handleCaptchaVerify}
+            onError={handleCaptchaError}
+            onExpire={handleCaptchaExpire}
+          />
+        </div>
+      )}
+
+      <Button
+        type="submit"
+        className="w-full"
+        disabled={loading || !email || (requiresCaptcha && !captchaToken)}
+      >
         {loading ? "Sending..." : "Send reset link"}
       </Button>
 
+      {errorMessage && (
+        <p className="text-destructive text-center text-sm">{errorMessage}</p>
+      )}
       {message && (
         <p className="text-muted-foreground text-center text-sm">{message}</p>
       )}
