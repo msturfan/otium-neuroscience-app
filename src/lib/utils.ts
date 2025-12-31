@@ -5,20 +5,94 @@ export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
 }
 
+/**
+ * Extract error details for internal logging (server-side only)
+ * DO NOT expose this to clients - use handleError() instead
+ */
+export const getErrorDetails = (error: unknown): string => {
+  if (error instanceof Error) {
+    return error.message;
+  }
+  if (error && typeof error === "object" && "message" in error) {
+    return String(error.message);
+  }
+  return "Unknown error";
+};
+
+/**
+ * Handle errors for client-facing responses
+ * Returns generic messages to prevent information disclosure
+ */
 export const handleError = (error: unknown) => {
   if (error instanceof Error) {
-    // Handle Prisma errors
-    if (error.message.includes("Unique constraint")) {
-      return { errorMessage: "A user with this email already exists" };
+    // Handle Prisma/Database errors - return generic messages
+    // to prevent account enumeration and information disclosure
+    if (
+      error.message.includes("Unique constraint") ||
+      error.message.includes("already exists") ||
+      error.message.includes("duplicate")
+    ) {
+      // Don't reveal if a user/email already exists
+      return { errorMessage: "Unable to complete request. Please try again." };
     }
     if (error.message.includes("Foreign key constraint")) {
-      return { errorMessage: "Database constraint error. Please try again." };
+      return { errorMessage: "Unable to complete request. Please try again." };
+    }
+    if (
+      error.message.includes("not found") ||
+      error.message.includes("Not found")
+    ) {
+      // Don't reveal if a resource doesn't exist
+      return { errorMessage: "Unable to complete request. Please try again." };
+    }
+    // For auth-related errors, return generic message
+    if (
+      error.message.toLowerCase().includes("email") ||
+      error.message.toLowerCase().includes("user") ||
+      error.message.toLowerCase().includes("password") ||
+      error.message.toLowerCase().includes("credential") ||
+      error.message.toLowerCase().includes("authentication")
+    ) {
+      return { errorMessage: "Unable to complete request. Please try again." };
+    }
+    // For other errors, still be cautious about what we expose
+    // Only return the message if it doesn't contain sensitive patterns
+    const sensitivePatterns = [
+      /email/i,
+      /user/i,
+      /password/i,
+      /token/i,
+      /session/i,
+      /database/i,
+      /prisma/i,
+      /supabase/i,
+    ];
+    const isSensitive = sensitivePatterns.some((pattern) =>
+      pattern.test(error.message),
+    );
+    if (isSensitive) {
+      return { errorMessage: "An error occurred. Please try again." };
     }
     return { errorMessage: error.message };
   }
-  // Handle non-Error objects (like Supabase errors)
+  // Handle non-Error objects
   if (error && typeof error === "object" && "message" in error) {
-    return { errorMessage: String(error.message) };
+    const message = String(error.message);
+    // Apply same sanitization
+    const sensitivePatterns = [
+      /email/i,
+      /user/i,
+      /password/i,
+      /token/i,
+      /session/i,
+    ];
+    const isSensitive = sensitivePatterns.some((pattern) =>
+      pattern.test(message),
+    );
+    if (isSensitive) {
+      return { errorMessage: "An error occurred. Please try again." };
+    }
+    return { errorMessage: message };
   }
   return { errorMessage: "An error occurred" };
 };
@@ -88,4 +162,44 @@ export function checkPasswordStrength(password: string): PasswordStrength {
     score: normalizedScore,
     ...strengthMap[normalizedScore],
   };
+}
+
+// Common disposable email domains to block
+const DISPOSABLE_EMAIL_DOMAINS = new Set([
+  "tempmail.com",
+  "throwaway.email",
+  "guerrillamail.com",
+  "mailinator.com",
+  "10minutemail.com",
+  "temp-mail.org",
+  "fakeinbox.com",
+  "trashmail.com",
+  "getnada.com",
+  "maildrop.cc",
+  "yopmail.com",
+  "tempail.com",
+  "dispostable.com",
+  "mintemail.com",
+  "sharklasers.com",
+  "spam4.me",
+  "grr.la",
+  "guerrillamail.info",
+  "pokemail.net",
+  "spamgourmet.com",
+]);
+
+/**
+ * Check if email domain is from a disposable email provider
+ */
+export function isDisposableEmail(email: string): boolean {
+  const domain = email.toLowerCase().split("@")[1];
+  return domain ? DISPOSABLE_EMAIL_DOMAINS.has(domain) : false;
+}
+
+/**
+ * Validate email format
+ */
+export function isValidEmail(email: string): boolean {
+  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+  return emailRegex.test(email);
 }
