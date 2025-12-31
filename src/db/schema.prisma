@@ -49,12 +49,28 @@ model UserStreakHistory {
   @@index([userId])
 }
 
+model WeeklyReport {
+  id          String   @id @default(uuid())
+  userId      String
+  weekStart   DateTime // Sunday 00:00 of the week in user's timezone
+  reportText  String   @db.Text
+  generatedAt DateTime @default(now())
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @default(now()) @updatedAt
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  @@unique([userId, weekStart])
+  @@index([userId])
+  @@index([weekStart])
+}
+
 model User {
   id        String   @id @default(uuid())
   email     String   @unique
   firstName String?
   lastName  String?
   dob       DateTime?
+  timezone  String?  @default("UTC") // IANA timezone (e.g., "America/New_York")
   isGuest   Boolean  @default(false)
   createdAt DateTime @default(now())
   updatedAt DateTime @default(now()) @updatedAt
@@ -62,4 +78,5 @@ model User {
 
   weeklyStreaks     WeeklyStreak[]
   streakHistory     UserStreakHistory?
+  weeklyReports     WeeklyReport[]
 }
