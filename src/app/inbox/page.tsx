@@ -1,6 +1,7 @@
 import { getUser } from "@/auth/server";
 import { redirect } from "next/navigation";
 import InboxDisplay from "./InboxDisplay";
+import { getInboxData } from "@/actions/inbox";
 
 export default async function InboxPage() {
   const user = await getUser();
@@ -9,5 +10,7 @@ export default async function InboxPage() {
     redirect("/login?redirect=/inbox");
   }
 
-  return <InboxDisplay userEmail={user.email} />;
+  const inboxData = await getInboxData();
+
+  return <InboxDisplay userEmail={user.email} initialData={inboxData} />;
 }

@@ -1,6 +1,7 @@
 "use client";
 
-import React from "react";
+import React, { useState } from "react";
+import { useRouter } from "next/navigation";
 import {
   Card,
   CardContent,
@@ -19,35 +20,51 @@ import {
   Brain,
   ChevronRight,
   AlertCircle,
+  CheckCircle2,
+  FileText,
 } from "lucide-react";
 
-const mockNotes = [
-  {
-    id: "1",
-    date: "Sun, Sep 14",
-    title: "Lazy Sunday + meal prep",
-    preview: "Took a long walk. Prepped chicken and veggies for the week…",
-  },
-  {
-    id: "2",
-    date: "Tue, Sep 16",
-    title: "Work sprint & gym",
-    preview: "Lots of meetings. Squeezed in a 30‑min lift after 7pm…",
-  },
-  {
-    id: "3",
-    date: "Thu, Sep 18",
-    title: "Friend catch‑up",
-    preview: "Called Maya, felt lighter after talking through the move…",
-  },
-];
+interface Note {
+  id: string;
+  title: string;
+  text: string;
+  createdAt: Date;
+  preview: string;
+  date: string;
+}
+
+interface WeeklyReport {
+  reportText: string;
+  generatedAt: Date;
+  weekStart: Date;
+}
+
+interface InboxData {
+  notes: Note[];
+  report: WeeklyReport | null;
+  noteCount: number;
+  hasEnoughNotes: boolean;
+  errorMessage: string | null;
+}
 
 interface InboxDisplayProps {
   userEmail?: string;
+  initialData: InboxData;
 }
 
-export default function HomePage({ userEmail }: InboxDisplayProps) {
-  const hasNotes = mockNotes.length > 0;
+export default function InboxDisplay({ userEmail, initialData }: InboxDisplayProps) {
+  const router = useRouter();
+  const [showReport, setShowReport] = useState(false);
+  const { notes, report, noteCount, hasEnoughNotes, errorMessage } = initialData;
+  const hasNotes = notes.length > 0;
+
+  const handleAddNote = () => {
+    router.push("/");
+  };
+
+  const handleViewNote = (noteId: string) => {
+    router.push(`/?noteId=${noteId}`);
+  };
 
   return (
     <div className="mx-auto max-w-5xl space-y-8 px-4 py-8">
@@ -59,21 +76,45 @@ export default function HomePage({ userEmail }: InboxDisplayProps) {
             Capture your days. Get a realistic weekly read on your life.
           </p>
         </div>
-        <Badge variant="secondary" className="rounded-full px-3 py-1">
-          Weekly Insights — in development
-        </Badge>
+        {hasEnoughNotes && report && (
+          <Badge variant="default" className="rounded-full px-3 py-1">
+            Report Ready
+          </Badge>
+        )}
       </div>
 
-      {/* Under‑construction notice */}
-      <Alert>
-        <AlertCircle className="h-5 w-5" />
-        <AlertTitle>Weekly report is coming soon</AlertTitle>
-        <AlertDescription>
-          You can write notes now. Each week, Otium AI will generate a private
-          summary that spots patterns (energy, mood, habits) and offers grounded
-          suggestions — without clichés.
-        </AlertDescription>
-      </Alert>
+      {/* Conditional Alert based on note count and report status */}
+      {hasEnoughNotes && report ? (
+        <Alert className="border-green-200 bg-green-50 dark:border-green-900 dark:bg-green-950">
+          <CheckCircle2 className="h-5 w-5 text-green-600 dark:text-green-400" />
+          <AlertTitle className="text-green-900 dark:text-green-100">
+            Your weekly report is ready!
+          </AlertTitle>
+          <AlertDescription className="text-green-800 dark:text-green-200">
+            We've analyzed your {noteCount} notes from this week and generated a
+            personalized report. Click below to view your insights.
+          </AlertDescription>
+        </Alert>
+      ) : !hasEnoughNotes ? (
+        <Alert>
+          <AlertCircle className="h-5 w-5" />
+          <AlertTitle>Write more notes for better insights</AlertTitle>
+          <AlertDescription>
+            You have {noteCount} {noteCount === 1 ? "note" : "notes"} this week.
+            Write at least 2 notes per week to get a detailed weekly report. Try
+            writing every day for the best results!
+          </AlertDescription>
+        </Alert>
+      ) : (
+        <Alert>
+          <AlertCircle className="h-5 w-5" />
+          <AlertTitle>Weekly report is coming soon</AlertTitle>
+          <AlertDescription>
+            Your report will be generated every Sunday at 9 AM. Keep writing
+            notes to get personalized insights about your week.
+          </AlertDescription>
+        </Alert>
+      )}
 
       <div className="grid grid-cols-1 gap-6 md:grid-cols-3">
         {/* Left: This Week's Notes */}
@@ -86,39 +127,60 @@ export default function HomePage({ userEmail }: InboxDisplayProps) {
           </CardHeader>
           <CardContent>
             {!hasNotes ? (
-              <EmptyState />
+              <EmptyState onAddNote={handleAddNote} />
             ) : (
-              <ul className="space-y-3">
-                {mockNotes.map((n) => (
-                  <li
-                    key={n.id}
-                    className="group hover:bg-muted/40 flex items-start justify-between rounded-xl border p-4 transition-colors"
-                  >
-                    <div>
-                      <div className="text-muted-foreground text-sm">
-                        {n.date}
+              <>
+                <ul className="space-y-3">
+                  {notes.map((n) => (
+                    <li
+                      key={n.id}
+                      className="group hover:bg-muted/40 flex items-start justify-between rounded-xl border p-4 transition-colors cursor-pointer"
+                      onClick={() => handleViewNote(n.id)}
+                    >
+                      <div className="flex-1 min-w-0">
+                        <div className="text-muted-foreground text-sm">
+                          {n.date}
+                        </div>
+                        <div className="font-medium truncate">{n.title}</div>
+                        <p className="text-muted-foreground mt-1 line-clamp-2 text-sm">
+                          {n.preview}
+                        </p>
                       </div>
-                      <div className="font-medium">{n.title}</div>
-                      <p className="text-muted-foreground mt-1 line-clamp-2 text-sm">
-                        {n.preview}
-                      </p>
-                    </div>
-                    <Button variant="ghost" size="icon" className="shrink-0">
-                      <ChevronRight className="h-4 w-4" />
-                    </Button>
-                  </li>
-                ))}
-              </ul>
-            )}
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="shrink-0"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleViewNote(n.id);
+                        }}
+                      >
+                        <ChevronRight className="h-4 w-4" />
+                      </Button>
+                    </li>
+                  ))}
+                </ul>
 
-            <div className="mt-4 flex items-center justify-between">
-              <Button>
-                <Plus className="mr-2 h-4 w-4" /> Add a note
-              </Button>
-              <Button variant="secondary" disabled>
-                View weekly report
-              </Button>
-            </div>
+                <div className="mt-4 flex items-center justify-between">
+                  <Button onClick={handleAddNote}>
+                    <Plus className="mr-2 h-4 w-4" /> Add a note
+                  </Button>
+                  {hasEnoughNotes && report ? (
+                    <Button
+                      variant="secondary"
+                      onClick={() => setShowReport(!showReport)}
+                    >
+                      <FileText className="mr-2 h-4 w-4" />
+                      {showReport ? "Hide" : "View"} weekly report
+                    </Button>
+                  ) : (
+                    <Button variant="secondary" disabled>
+                      View weekly report
+                    </Button>
+                  )}
+                </div>
+              </>
+            )}
           </CardContent>
         </Card>
 
@@ -152,12 +214,41 @@ export default function HomePage({ userEmail }: InboxDisplayProps) {
         </Card>
       </div>
 
+      {/* Weekly Report Display */}
+      {hasEnoughNotes && report && showReport && (
+        <Card className="border-primary/20">
+          <CardHeader>
+            <div className="flex items-center justify-between">
+              <div>
+                <CardTitle>Your Weekly Report</CardTitle>
+                <CardDescription>
+                  Generated on{" "}
+                  {new Date(report.generatedAt).toLocaleDateString("en-US", {
+                    weekday: "long",
+                    year: "numeric",
+                    month: "long",
+                    day: "numeric",
+                  })}
+                </CardDescription>
+              </div>
+            </div>
+          </CardHeader>
+          <CardContent>
+            <div className="prose prose-sm dark:prose-invert max-w-none">
+              <div className="whitespace-pre-wrap text-sm leading-relaxed">
+                {report.reportText}
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
       {/* Roadmap */}
       <Card>
         <CardHeader>
           <CardTitle>Coming soon</CardTitle>
           <CardDescription>
-            What we’re building next for your weekly view.
+            What we're building next for your weekly view.
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -192,14 +283,14 @@ function Step({
   );
 }
 
-function EmptyState() {
+function EmptyState({ onAddNote }: { onAddNote: () => void }) {
   return (
     <div className="flex flex-col items-center justify-center rounded-xl border border-dashed p-8 text-center">
       <div className="mb-2 text-lg font-medium">No notes yet this week</div>
       <p className="text-muted-foreground mb-4 max-w-sm text-sm">
         Add a few thoughts today. Short, honest notes power your weekly insight.
       </p>
-      <Button>
+      <Button onClick={onAddNote}>
         <Plus className="mr-2 h-4 w-4" /> Write a quick note
       </Button>
     </div>
