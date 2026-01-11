@@ -44,3 +44,6 @@ next-env.d.ts
 #data 
 src/data/*
 !src/data/quotes.json
+
+#Neuroscience
+neuroplasticity-notes.md
