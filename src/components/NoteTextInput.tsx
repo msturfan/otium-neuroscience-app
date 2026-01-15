@@ -21,7 +21,8 @@ type Props = {
   noteId: string;
   startingNoteText: string;
   user: User | null;
-  feedNotes?: NoteLike[]; // for authed users (0..1 for this note)
+  feedNotes?: NoteLike[];
+  greeting?: string;
 };
 
 export default function NoteTextInput({
@@ -29,6 +30,7 @@ export default function NoteTextInput({
   startingNoteText,
   user,
   feedNotes = [],
+  greeting = "What's on your mind?",
 }: Props) {
   const search = useSearchParams();
   const router = useRouter();
@@ -57,10 +59,19 @@ export default function NoteTextInput({
   // Hide the composer after a successful send (for this visit)
   const [hideAfterSend, setHideAfterSend] = useState(false);
 
+  // Prevent typewriter animation from running during SSR/hydration
+  const [isHydrated, setIsHydrated] = useState(false);
+  useEffect(() => {
+    setIsHydrated(true);
+  }, []);
+
+  // Track if user has typed - prevent typewriter from showing again after clearing
+  const [hasTyped, setHasTyped] = useState(false);
+
   // Store AI greeting messages for this note
   // Initialize as empty - will be loaded from sessionStorage if appropriate
   const [aiGreetings, setAiGreetings] = useState<NoteLike[]>([]);
-  
+
   // Track the current noteId to detect when it changes
   const [currentNoteId, setCurrentNoteId] = useState(noteId);
 
@@ -68,7 +79,7 @@ export default function NoteTextInput({
   const userNotes: NoteLike[] = user
     ? feedNotes
     : (guestNotes.filter((n) => n.id === noteId) as NoteLike[]);
-  
+
   // Check if there's user note content (not including greetings)
   // This must be defined before useEffect hooks that use it
   const hasUserNoteContent = useMemo(() => {
@@ -79,13 +90,17 @@ export default function NoteTextInput({
   // Only save if there's actual content (not just loading states) and user note exists
   // Only save for the current note to prevent cross-contamination
   useEffect(() => {
-    if (typeof window !== "undefined" && 
-        hasUserNoteContent && 
-        aiGreetings.length > 0 && 
-        currentNoteId === noteId) {
+    if (
+      typeof window !== "undefined" &&
+      hasUserNoteContent &&
+      aiGreetings.length > 0 &&
+      currentNoteId === noteId
+    ) {
       try {
         // Filter out loading states before saving - only save actual greetings
-        const greetingsToSave = aiGreetings.filter(g => !g.isLoading && g.text);
+        const greetingsToSave = aiGreetings.filter(
+          (g) => !g.isLoading && g.text,
+        );
         if (greetingsToSave.length > 0) {
           const serialized = JSON.stringify(greetingsToSave);
           sessionStorage.setItem(`ai-greetings-${noteId}`, serialized);
@@ -96,7 +111,7 @@ export default function NoteTextInput({
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [aiGreetings, noteId, hasUserNoteContent, currentNoteId]);
-  
+
   // Handle noteId changes and load appropriate greetings
   useEffect(() => {
     // Check if we've switched to a different note
@@ -104,7 +119,7 @@ export default function NoteTextInput({
       // Clear current greetings when switching notes
       setAiGreetings([]);
       setCurrentNoteId(noteId);
-      
+
       // Load greetings for the new note if it has content
       if (typeof window !== "undefined" && hasUserNoteContent) {
         try {
@@ -117,7 +132,10 @@ export default function NoteTextInput({
             }
           }
         } catch (error) {
-          console.error("Failed to reload AI greetings from sessionStorage:", error);
+          console.error(
+            "Failed to reload AI greetings from sessionStorage:",
+            error,
+          );
         }
       }
     } else if (typeof window !== "undefined") {
@@ -134,7 +152,10 @@ export default function NoteTextInput({
               }
             }
           } catch (error) {
-            console.error("Failed to reload AI greetings from sessionStorage:", error);
+            console.error(
+              "Failed to reload AI greetings from sessionStorage:",
+              error,
+            );
           }
         }
       } else {
@@ -150,11 +171,13 @@ export default function NoteTextInput({
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [noteId, hasUserNoteContent, currentNoteId]);
-  
+
   // Combine user notes and AI greetings, sorted by creation time
   const feed: NoteLike[] = useMemo(() => {
     const combined = [...userNotes, ...aiGreetings];
-    return combined.sort((a, b) => +new Date(a.createdAt) - +new Date(b.createdAt));
+    return combined.sort(
+      (a, b) => +new Date(a.createdAt) - +new Date(b.createdAt),
+    );
   }, [userNotes, aiGreetings]);
   const currentBubbleText = useMemo(
     () => feed[0]?.text?.toString() ?? "",
@@ -233,6 +256,10 @@ export default function NoteTextInput({
     const text = e.target.value;
     setNoteText(text);
     scheduleSave(text);
+    // Mark that user has typed - prevents typewriter from showing again
+    if (!hasTyped && text.length > 0) {
+      setHasTyped(true);
+    }
   };
 
   // ---------- Send ----------
@@ -313,7 +340,7 @@ export default function NoteTextInput({
             if (updateRes?.isFirstNoteOfDay && user) {
               window.dispatchEvent(new CustomEvent("firstDailyNoteSaved"));
             }
-            
+
             // Generate greeting in the background after save completes
             // Add loading bubble immediately
             const loadingId = `ai-greeting-loading-${Date.now()}`;
@@ -351,7 +378,9 @@ export default function NoteTextInput({
               .catch((error) => {
                 console.error("Error generating greeting:", error);
                 // Remove loading bubble on error
-                setAiGreetings((prev) => prev.filter((n) => n.id !== loadingId));
+                setAiGreetings((prev) =>
+                  prev.filter((n) => n.id !== loadingId),
+                );
               });
           } else {
             toast.error("Failed to create note");
@@ -363,7 +392,7 @@ export default function NoteTextInput({
           if (res?.isFirstNoteOfDay && user) {
             window.dispatchEvent(new CustomEvent("firstDailyNoteSaved"));
           }
-          
+
           // Generate greeting in the background after save completes
           // Add loading bubble immediately
           const loadingId2 = `ai-greeting-loading-${Date.now()}`;
@@ -412,8 +441,6 @@ export default function NoteTextInput({
     setHideAfterSend(true);
 
     const shell = document.getElementById("shell");
-    const hero = document.getElementById("hero-block");
-    hero?.classList.add("hidden");
     shell?.classList.remove("justify-center");
     shell?.classList.add("justify-start");
 
@@ -489,14 +516,50 @@ export default function NoteTextInput({
                 value={noteText}
                 onChange={handleUpdateNote}
                 onKeyDown={handleKeyDown}
-                placeholder={isEditing ? "Edit your note" : "Write your note"}
+                placeholder=""
                 className="custom-scrollbar flex-1 resize-none rounded-t-2xl rounded-b-none border-0 bg-transparent p-4 shadow-none focus:ring-0 focus:outline-none focus-visible:ring-0 focus-visible:outline-none"
                 rows={1}
                 style={{ overflowY: "auto", minHeight: 48, maxHeight: 220 }}
               />
+              {/* Typewriter placeholder - shows only on initial load, not after user has typed */}
+              {!noteText && !isEditing && !hasTyped && (
+                <div
+                  className="pointer-events-none absolute inset-0 flex items-start p-4"
+                  suppressHydrationWarning
+                >
+                  <span
+                    suppressHydrationWarning
+                    className={
+                      isHydrated
+                        ? "typewriter-text text-muted-foreground text-base md:text-sm"
+                        : "text-muted-foreground text-base opacity-0 md:text-sm"
+                    }
+                    style={
+                      isHydrated
+                        ? {
+                            animation: `typewriter ${Math.min(greeting.length * 0.06, 2.5)}s steps(${greeting.length}) forwards`,
+                          }
+                        : undefined
+                    }
+                  >
+                    {greeting}
+                  </span>
+                </div>
+              )}
+              {/* Static placeholder for editing mode */}
+              {!noteText && isEditing && (
+                <div className="pointer-events-none absolute inset-0 flex items-start p-4">
+                  <span className="text-muted-foreground text-base md:text-sm">
+                    Edit your note
+                  </span>
+                </div>
+              )}
             </div>
 
-            <div className="flex items-center justify-between rounded-b-2xl bg-transparent px-4 py-3">
+            <div
+              className="flex items-center justify-between rounded-b-2xl bg-transparent px-4 py-3"
+              style={{ height: "40px" }}
+            >
               <div className="flex items-center gap-2" />
               <div className="flex items-center gap-2">
                 <MicrophoneButton onTranscript={handleSpeechTranscript} />

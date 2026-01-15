@@ -1,5 +1,6 @@
 import { redirect } from "next/navigation";
 import { randomUUID } from "crypto";
+import Image from "next/image";
 import { prisma } from "@/db/prisma";
 import { getUser } from "@/auth/server";
 import HomeToaster from "@/components/HomeToaster";
@@ -54,31 +55,25 @@ export default async function HomePage({ searchParams }: Props) {
         hasContentServer ? "justify-start" : "justify-center"
       } gap-4 px-4`}
     >
-      <div id="hero-block" className={hasContentServer ? "hidden" : ""}>
-        <div className="flex flex-col items-center">
-          <img
-            src="/appicon1.ico"
-            alt="App Logo"
-            className="mb-0.5 h-20 dark:hidden"
+      {!hasContentServer && (
+        <div className="flex flex-col items-center mb-2">
+          <Image
+            src="/otium_gray.ico"
+            alt="Otium Logo"
+            width={150}
+            height={150}
+            className="mx-auto opacity-30"
           />
-          <img
-            src="/appicon1.ico"
-            alt="App Logo"
-            className="mb-0.5 hidden h-20 dark:block"
-          />
-          <h1 className="text-center text-3xl font-bold text-gray-800 dark:text-gray-200">
-            {greeting}
-          </h1>
         </div>
-      </div>
-
+      )}
       <div className="relative w-full max-w-4xl">
         <div className="flex justify-center">
           <NoteTextInput
             noteId={noteId}
             startingNoteText={note?.text || ""}
             user={user}
-            feedNotes={feedNotes} // only this note (0..1)
+            feedNotes={feedNotes}
+            greeting={greeting}
           />
         </div>
         <HomeToaster />
