@@ -3,7 +3,7 @@
 import * as React from "react"
 import { Slot } from "@radix-ui/react-slot"
 import { cva, VariantProps } from "class-variance-authority"
-import { PanelLeftIcon } from "lucide-react"
+import { PanelLeftIcon, PanelLeftClose, Menu } from "lucide-react"
 
 import { useIsMobile } from "@/hooks/use-mobile"
 import { cn } from "@/lib/utils"
@@ -258,7 +258,21 @@ function SidebarTrigger({
   onClick,
   ...props
 }: React.ComponentProps<typeof Button>) {
-  const { toggleSidebar } = useSidebar()
+  const { toggleSidebar, state } = useSidebar()
+  const [isAnimating, setIsAnimating] = React.useState(false)
+
+  const handleClick = (event: React.MouseEvent<HTMLButtonElement>) => {
+    setIsAnimating(true)
+    onClick?.(event)
+    toggleSidebar()
+    
+    // Reset animation after it completes
+    setTimeout(() => {
+      setIsAnimating(false)
+    }, 400)
+  }
+
+  const isOpen = state === "expanded"
 
   return (
     <Button
@@ -266,14 +280,37 @@ function SidebarTrigger({
       data-slot="sidebar-trigger"
       variant="ghost"
       size="icon"
-      className={cn("size-7", className)}
-      onClick={(event) => {
-        onClick?.(event)
-        toggleSidebar()
-      }}
+      className={cn(
+        "sidebar-trigger-button relative overflow-hidden rounded-full size-7",
+        "hover:bg-accent/50 active:scale-95",
+        "transition-all duration-200 ease-out",
+        className
+      )}
+      onClick={handleClick}
       {...props}
     >
-      <PanelLeftIcon />
+      <div className="relative h-4 w-4 flex items-center justify-center">
+        <Menu
+          className={cn(
+            "sidebar-trigger-icon absolute h-4 w-4",
+            "transition-all duration-500 ease-in-out",
+            isOpen
+              ? "rotate-90 scale-0 opacity-0"
+              : "rotate-0 scale-100 opacity-100",
+            isAnimating && !isOpen && "rotating"
+          )}
+        />
+        <PanelLeftClose
+          className={cn(
+            "sidebar-trigger-icon absolute h-4 w-4",
+            "transition-all duration-500 ease-in-out",
+            isOpen
+              ? "rotate-0 scale-100 opacity-100"
+              : "-rotate-90 scale-0 opacity-0",
+            isAnimating && isOpen && "rotating"
+          )}
+        />
+      </div>
       <span className="sr-only">Toggle Sidebar</span>
     </Button>
   )
