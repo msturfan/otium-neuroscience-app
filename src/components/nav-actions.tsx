@@ -35,6 +35,7 @@ import {
   SidebarMenuItem,
 } from "@/components/ui/sidebar";
 import DarkModeToggle from "./DarkModeToggle";
+import { AnalyticsDialog } from "./AnalyticsDialog";
 
 const data = [
   [
@@ -88,6 +89,7 @@ const data = [
 export function NavActions({ user }: { user: User | null }) {
   const [isOpen, setIsOpen] = React.useState(false);
   const [isLoggingOut, setIsLoggingOut] = React.useState(false);
+  const [isAnalyticsOpen, setIsAnalyticsOpen] = React.useState(false);
   const router = useRouter();
 
   React.useEffect(() => {
@@ -134,72 +136,82 @@ export function NavActions({ user }: { user: User | null }) {
     setIsOpen(false);
   };
 
+  const handleViewAnalytics = () => {
+    setIsAnalyticsOpen(true);
+    setIsOpen(false);
+  };
+
   return (
-    <div className="flex items-center gap-2 text-sm">
-      {user ? (
-        <>
-          <DarkModeToggle />
-          <Popover open={isOpen} onOpenChange={setIsOpen}>
-            <PopoverTrigger asChild>
-              <Button
-                variant="ghost"
-                size="icon"
-                className="data-[state=open]:bg-accent h-7 w-7"
+    <>
+      <div className="flex items-center gap-2 text-sm">
+        {user ? (
+          <>
+            <DarkModeToggle />
+            <Popover open={isOpen} onOpenChange={setIsOpen}>
+              <PopoverTrigger asChild>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="data-[state=open]:bg-accent h-7 w-7"
+                >
+                  <MoreHorizontal />
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent
+                className="w-56 overflow-hidden rounded-lg p-0"
+                align="end"
               >
-                <MoreHorizontal />
-              </Button>
-            </PopoverTrigger>
-            <PopoverContent
-              className="w-56 overflow-hidden rounded-lg p-0"
-              align="end"
-            >
-              <Sidebar collapsible="none" className="bg-transparent">
-                <SidebarContent>
-                  {data.map((group, index) => (
-                    <SidebarGroup
-                      key={index}
-                      className="border-b last:border-none"
-                    >
-                      <SidebarGroupContent className="gap-0">
-                        <SidebarMenu>
-                          {group.map((item, index) => (
-                            <SidebarMenuItem key={index}>
-                              <SidebarMenuButton
-                                onClick={
-                                  item.label === "Log Out"
-                                    ? handleSignOut
-                                    : item.label == "Copy Link"
-                                      ? handleCopyLink
-                                      : undefined
-                                }
-                                disabled={
-                                  item.label === "Log Out" && isLoggingOut
-                                }
-                              >
-                                <item.icon /> <span>{item.label}</span>
-                              </SidebarMenuButton>
-                            </SidebarMenuItem>
-                          ))}
-                        </SidebarMenu>
-                      </SidebarGroupContent>
-                    </SidebarGroup>
-                  ))}
-                </SidebarContent>
-              </Sidebar>
-            </PopoverContent>
-          </Popover>
-        </>
-      ) : (
-        <>
-          <Button asChild variant="outline" size="sm">
-            <NextLink href="/login">Log In</NextLink>
-          </Button>
-          <Button asChild size="sm">
-            <NextLink href="/sign-up">Sign Up</NextLink>
-          </Button>
-          <DarkModeToggle />
-        </>
-      )}
-    </div>
+                <Sidebar collapsible="none" className="bg-transparent">
+                  <SidebarContent>
+                    {data.map((group, index) => (
+                      <SidebarGroup
+                        key={index}
+                        className="border-b last:border-none"
+                      >
+                        <SidebarGroupContent className="gap-0">
+                          <SidebarMenu>
+                            {group.map((item, index) => (
+                              <SidebarMenuItem key={index}>
+                                <SidebarMenuButton
+                                  onClick={
+                                    item.label === "Log Out"
+                                      ? handleSignOut
+                                      : item.label === "Copy Link"
+                                        ? handleCopyLink
+                                        : item.label === "View analytics"
+                                          ? handleViewAnalytics
+                                          : undefined
+                                  }
+                                  disabled={
+                                    item.label === "Log Out" && isLoggingOut
+                                  }
+                                >
+                                  <item.icon /> <span>{item.label}</span>
+                                </SidebarMenuButton>
+                              </SidebarMenuItem>
+                            ))}
+                          </SidebarMenu>
+                        </SidebarGroupContent>
+                      </SidebarGroup>
+                    ))}
+                  </SidebarContent>
+                </Sidebar>
+              </PopoverContent>
+            </Popover>
+          </>
+        ) : (
+          <>
+            <Button asChild variant="outline" size="sm">
+              <NextLink href="/login">Log In</NextLink>
+            </Button>
+            <Button asChild size="sm">
+              <NextLink href="/sign-up">Sign Up</NextLink>
+            </Button>
+            <DarkModeToggle />
+          </>
+        )}
+      </div>
+      <AnalyticsDialog open={isAnalyticsOpen} onOpenChange={setIsAnalyticsOpen} />
+    </>
   );
 }
