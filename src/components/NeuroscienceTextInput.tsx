@@ -1,9 +1,10 @@
 "use client";
 
 import { useSearchParams, useRouter } from "next/navigation";
-import { ChangeEvent, useEffect, useMemo, useRef, useState } from "react";
+import { ChangeEvent, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
 import { User } from "@supabase/supabase-js";
+import { Square } from "lucide-react";
 
 import { Textarea } from "./ui/textarea";
 import NewNoteButton from "./NewNoteButton";
@@ -13,9 +14,13 @@ import useNote from "@/hooks/useNote";
 import { GuestNote } from "@/providers/NoteProvider";
 import { updateNeuroscienceAction, createNeuroscienceAction } from "@/actions/neuroscience";
 import { generateNoteTitle } from "@/actions/generate-title";
-import { generateNoteGreeting } from "@/actions/generate-greeting";
-import { generateNeuroscienceAnswer } from "@/actions/generate-neuroscience-answer";
 import MicrophoneButton from "./MicrophoneButton";
+import { Button } from "./ui/button";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 
 type Props = {
   noteId: string;
@@ -53,12 +58,6 @@ export default function NeuroscienceTextInput({
   const textareaRef = useRef<HTMLTextAreaElement | null>(null);
   const updateTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
-  // Are we editing the existing note content?
-  const [isEditing, setIsEditing] = useState(false);
-
-  // Hide the composer after a successful send (for this visit)
-  const [hideAfterSend, setHideAfterSend] = useState(false);
-
   // Prevent typewriter animation from running during SSR/hydration
   const [isHydrated, setIsHydrated] = useState(false);
   useEffect(() => {
@@ -68,139 +67,131 @@ export default function NeuroscienceTextInput({
   // Track if user has typed - prevent typewriter from showing again after clearing
   const [hasTyped, setHasTyped] = useState(false);
 
-  // Store AI greeting messages for this note
-  // Initialize as empty - will be loaded from sessionStorage if appropriate
-  const [aiGreetings, setAiGreetings] = useState<NoteLike[]>([]);
+  // Chat messages for the conversation (user messages + AI responses)
+  const [chatMessages, setChatMessages] = useState<NoteLike[]>([]);
 
   // Track the current noteId to detect when it changes
   const [currentNoteId, setCurrentNoteId] = useState(noteId);
 
-  // Feed scoped to this noteId only - combine user notes and AI greetings
+  // Streaming state
+  const [isStreaming, setIsStreaming] = useState(false);
+  const abortControllerRef = useRef<AbortController | null>(null);
+  const streamingMessageIdRef = useRef<string | null>(null);
+
+  // Feed scoped to this noteId only
   const userNotes: NoteLike[] = user
     ? feedNotes
     : (guestNotes.filter((n) => n.id === noteId) as NoteLike[]);
 
-  // Check if there's user note content (not including greetings)
-  // This must be defined before useEffect hooks that use it
+  // Check if there's user note content
   const hasUserNoteContent = useMemo(() => {
     return userNotes.length > 0 && userNotes[0]?.text?.trim().length > 0;
   }, [userNotes]);
 
-  // Save AI greetings to sessionStorage whenever they change
-  // Only save if there's actual content (not just loading states) and user note exists
-  // Only save for the current note to prevent cross-contamination
+  // Save chat messages to sessionStorage whenever they change
   useEffect(() => {
     if (
       typeof window !== "undefined" &&
-      hasUserNoteContent &&
-      aiGreetings.length > 0 &&
+      chatMessages.length > 0 &&
       currentNoteId === noteId
     ) {
       try {
-        // Filter out loading states before saving - only save actual greetings
-        const greetingsToSave = aiGreetings.filter(
-          (g) => !g.isLoading && g.text,
+        const messagesToSave = chatMessages.filter(
+          (m) => !m.isLoading && m.text,
         );
-        if (greetingsToSave.length > 0) {
-          const serialized = JSON.stringify(greetingsToSave);
-          sessionStorage.setItem(`ai-greetings-neuro-${noteId}`, serialized);
+        if (messagesToSave.length > 0) {
+          const serialized = JSON.stringify(messagesToSave);
+          sessionStorage.setItem(`chat-neuro-${noteId}`, serialized);
         }
       } catch (error) {
-        console.error("Failed to save AI greetings to sessionStorage:", error);
+        console.error("Failed to save chat messages to sessionStorage:", error);
       }
     }
-  }, [aiGreetings, noteId, hasUserNoteContent, currentNoteId]);
+  }, [chatMessages, noteId, currentNoteId]);
 
-  // Handle noteId changes and load appropriate greetings
+  // Handle noteId changes and load appropriate messages
   useEffect(() => {
-    // Check if we've switched to a different note
     if (currentNoteId !== noteId) {
-      // Clear current greetings when switching notes
-      setAiGreetings([]);
+      setChatMessages([]);
       setCurrentNoteId(noteId);
-      // Reset state when navigating to a new note to ensure textbox is visible
-      setHideAfterSend(false);
-      setIsEditing(false);
       setHasTyped(false);
 
-      // Load greetings for the new note if it has content
-      if (typeof window !== "undefined" && hasUserNoteContent) {
+      // Stop any ongoing stream
+      if (abortControllerRef.current) {
+        abortControllerRef.current.abort();
+        abortControllerRef.current = null;
+      }
+      setIsStreaming(false);
+
+      if (typeof window !== "undefined") {
         try {
-          const stored = sessionStorage.getItem(`ai-greetings-neuro-${noteId}`);
+          const stored = sessionStorage.getItem(`chat-neuro-${noteId}`);
           if (stored) {
             const parsed = JSON.parse(stored);
-            // Only load if we have content and greetings exist
-            if (parsed.length > 0) {
-              setAiGreetings(parsed);
-            }
+            if (parsed.length > 0) setChatMessages(parsed);
           }
         } catch (error) {
-          console.error(
-            "Failed to reload AI greetings from sessionStorage:",
-            error,
-          );
+          console.error("Failed to reload chat messages:", error);
         }
       }
     } else if (typeof window !== "undefined") {
-      // Same note, but check if content status changed
-      if (hasUserNoteContent) {
-        // Only load greetings if not already loaded
-        if (aiGreetings.length === 0) {
-          try {
-            const stored = sessionStorage.getItem(`ai-greetings-neuro-${noteId}`);
-            if (stored) {
-              const parsed = JSON.parse(stored);
-              if (parsed.length > 0) {
-                setAiGreetings(parsed);
-              }
-            }
-          } catch (error) {
-            console.error(
-              "Failed to reload AI greetings from sessionStorage:",
-              error,
-            );
-          }
-        }
-      } else {
-        // Clear greetings if there's no user note content (note was deleted/cleared)
-        setAiGreetings([]);
-        // Also clear from sessionStorage for this noteId
+      if (chatMessages.length === 0) {
         try {
-          sessionStorage.removeItem(`ai-greetings-neuro-${noteId}`);
+          const stored = sessionStorage.getItem(`chat-neuro-${noteId}`);
+          if (stored) {
+            const parsed = JSON.parse(stored);
+            if (parsed.length > 0) setChatMessages(parsed);
+          }
         } catch (error) {
-          // Ignore errors when clearing
+          console.error("Failed to reload chat messages:", error);
         }
       }
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [noteId, hasUserNoteContent, currentNoteId]);
+  }, [noteId, currentNoteId]);
 
-  // Combine user notes and AI greetings, sorted by creation time
+  // Combine user notes and chat messages, sorted by creation time.
+  // Avoid showing the initial user note twice once chatMessages has it.
   const feed: NoteLike[] = useMemo(() => {
-    const combined = [...userNotes, ...aiGreetings];
+    const chatUserTexts = new Set(
+      chatMessages
+        .filter((m) => !m.isAI && m.text?.trim())
+        .map((m) => m.text.trim()),
+    );
+    const filteredUserNotes = userNotes.filter(
+      (n) => !chatUserTexts.has(n.text?.trim() ?? ""),
+    );
+    const combined = [...filteredUserNotes, ...chatMessages];
     return combined.sort(
       (a, b) => +new Date(a.createdAt) - +new Date(b.createdAt),
     );
-  }, [userNotes, aiGreetings]);
-  const currentBubbleText = useMemo(
-    () => feed[0]?.text?.toString() ?? "",
-    [feed],
-  );
-  const hasContent = !!currentBubbleText.trim();
+  }, [userNotes, chatMessages]);
 
-  // Show composer only when:
-  //  - there is NO existing bubble yet, or
-  //  - user explicitly enters Edit mode
-  const showComposer = isEditing || (!hasContent && !hideAfterSend);
+  const hasContent = feed.some((n) => n.text?.trim());
 
   // Hydrate composer on first load / when URL matches
   useEffect(() => {
-    if (noteIdParam === noteId) {
+    if (
+      noteIdParam === noteId &&
+      !hasTyped &&
+      !noteText &&
+      !hasContent &&
+      chatMessages.length === 0
+    ) {
       const guest = guestNotes.find((n) => n.id === noteId);
       setNoteText(guest ? guest.text : startingNoteText);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [startingNoteText, noteIdParam, noteId, guestNotes]);
+  }, [
+    startingNoteText,
+    noteIdParam,
+    noteId,
+    guestNotes,
+    hasTyped,
+    noteText,
+    hasContent,
+    chatMessages.length,
+  ]);
 
   // Auto-resize textarea
   useEffect(() => {
@@ -209,26 +200,12 @@ export default function NeuroscienceTextInput({
     textareaRef.current.style.height = `${textareaRef.current.scrollHeight}px`;
   }, [noteText]);
 
-  // ---------- Helpers ----------
-  // Check if text is a question (ends with ? or starts with question words)
-  const isQuestion = (text: string): boolean => {
-    const trimmed = text.trim();
-    if (trimmed.endsWith("?")) return true;
-    
-    const questionWords = ["what", "how", "why", "when", "where", "who", "which", "is", "are", "can", "could", "does", "do", "will", "would", "should", "explain", "tell me", "describe"];
-    const firstWord = trimmed.toLowerCase().split(/\s+/)[0];
-    return questionWords.some(word => firstWord.startsWith(word));
-  };
-
   const upsertGuestNote = async (text: string) => {
     const existing = guestNotes.find((n) => n.id === noteId);
-
-    // Generate title if note has substantial content
     let title: string | null = null;
     if (text.trim().length > 20) {
       title = await generateNoteTitle(text);
     }
-
     if (existing) {
       updateGuestNote(noteId, text, title);
     } else {
@@ -236,152 +213,182 @@ export default function NeuroscienceTextInput({
     }
   };
 
-  // Only autosave while EDITING.
-  const scheduleSave = (text: string) => {
-    if (!isEditing) return; // ← important: do NOT touch the saved note while composing a new one
-    if (updateTimeoutRef.current) clearTimeout(updateTimeoutRef.current);
-    updateTimeoutRef.current = setTimeout(async () => {
-      if (!user) await upsertGuestNote(text);
-      else updateNeuroscienceAction(noteId, text);
-    }, 1200);
-  };
-
-  const flushSaveNow = async (text: string) => {
-    if (!isEditing) return; // safety: only flush when editing
-    if (updateTimeoutRef.current) clearTimeout(updateTimeoutRef.current);
-    if (!user) {
-      await upsertGuestNote(text);
-      return null;
-    }
-    const res = await updateNeuroscienceAction(noteId, text);
-    if (res?.errorMessage) {
-      const created = await createNeuroscienceAction(noteId);
-      if (!created?.errorMessage) {
-        const updateRes = await updateNeuroscienceAction(noteId, text);
-        return updateRes;
-      }
-      return null;
-    }
-    return res;
-  };
-
   const handleUpdateNote = (e: ChangeEvent<HTMLTextAreaElement>) => {
     const text = e.target.value;
     setNoteText(text);
-    scheduleSave(text);
-    // Mark that user has typed - prevents typewriter from showing again
     if (!hasTyped && text.length > 0) {
       setHasTyped(true);
     }
   };
 
+  // ---------- Streaming AI response ----------
+  const streamAIResponse = useCallback(async (userMessage: string) => {
+    const aiMessageId = `ai-stream-${Date.now()}`;
+    streamingMessageIdRef.current = aiMessageId;
+
+    // Add loading bubble
+    setChatMessages((prev) => [
+      ...prev,
+      {
+        id: aiMessageId,
+        text: "",
+        createdAt: new Date(),
+        isAI: true,
+        isLoading: true,
+      },
+    ]);
+
+    // Build conversation history for context
+    const conversationHistory = chatMessages
+      .filter((m) => m.text?.trim() && !m.isLoading)
+      .map((m) => ({
+        role: m.isAI ? "assistant" as const : "user" as const,
+        content: m.text,
+      }));
+
+    // Also include the first user note if it exists
+    if (hasUserNoteContent && userNotes[0]?.text?.trim()) {
+      conversationHistory.unshift({
+        role: "user" as const,
+        content: userNotes[0].text,
+      });
+    }
+
+    // System prompt is injected server-side in the API route
+    const messages = [
+      ...conversationHistory,
+      { role: "user" as const, content: userMessage },
+    ];
+
+    const controller = new AbortController();
+    abortControllerRef.current = controller;
+    setIsStreaming(true);
+
+    try {
+      const response = await fetch("/api/chat", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ messages }),
+        signal: controller.signal,
+      });
+
+      if (!response.ok || !response.body) {
+        throw new Error("Failed to get streaming response");
+      }
+
+      const reader = response.body.getReader();
+      const decoder = new TextDecoder();
+      let accumulated = "";
+
+      // Replace loading with empty streaming bubble
+      setChatMessages((prev) =>
+        prev.map((m) =>
+          m.id === aiMessageId ? { ...m, isLoading: false, text: "" } : m,
+        ),
+      );
+
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+
+        const text = decoder.decode(value, { stream: true });
+        accumulated += text;
+
+        // Update the AI message with accumulated text
+        setChatMessages((prev) =>
+          prev.map((m) =>
+            m.id === aiMessageId ? { ...m, text: accumulated } : m,
+          ),
+        );
+      }
+
+      // Final update
+      if (accumulated.trim()) {
+        setChatMessages((prev) =>
+          prev.map((m) =>
+            m.id === aiMessageId
+              ? { ...m, text: accumulated.trim(), isLoading: false }
+              : m,
+          ),
+        );
+      } else {
+        // If no text was received, remove the bubble
+        setChatMessages((prev) => prev.filter((m) => m.id !== aiMessageId));
+      }
+    } catch (error: unknown) {
+      if (error instanceof Error && error.name === "AbortError") {
+        // User stopped the stream — keep whatever was accumulated
+        setChatMessages((prev) =>
+          prev.map((m) =>
+            m.id === aiMessageId ? { ...m, isLoading: false } : m,
+          ),
+        );
+      } else {
+        console.error("Streaming error:", error);
+        // Remove loading bubble and fall back to non-streaming
+        setChatMessages((prev) => prev.filter((m) => m.id !== aiMessageId));
+        await fallbackNonStreaming();
+      }
+    } finally {
+      setIsStreaming(false);
+      abortControllerRef.current = null;
+      streamingMessageIdRef.current = null;
+
+      // Focus textarea for follow-up
+      setTimeout(() => {
+        if (textareaRef.current) {
+          textareaRef.current.focus();
+        }
+      }, 100);
+    }
+  }, [chatMessages, hasUserNoteContent, userNotes]);
+
+  // Fallback to a short, neuroscience-focused error message
+  const fallbackNonStreaming = async () => {
+    setChatMessages((prev) => [
+      ...prev,
+      {
+        id: `ai-error-${Date.now()}`,
+        text: "I couldn’t generate a response right now. Try again, or rephrase your question with a specific situation or goal.",
+        createdAt: new Date(),
+        isAI: true,
+      },
+    ]);
+  };
+
+  // Stop streaming
+  const handleStopStreaming = () => {
+    if (abortControllerRef.current) {
+      abortControllerRef.current.abort();
+    }
+  };
+
   // ---------- Send ----------
-  // Behavior:
-  // - If editing: save edits to the SAME note, then hide composer.
-  // - If not editing: create/overwrite the note ON SEND only, then hide composer.
   const sendNote = async () => {
     const textToSave = noteText.trim();
     if (!textToSave) return;
 
-    if (isEditing) {
-      const res = await flushSaveNow(textToSave);
-      setIsEditing(false);
-      toast.success("Note updated successfully");
+    const isFirstMessage = !hasContent;
 
-      // Generate answer or greeting in the background after save completes
-      if (res && !res.errorMessage) {
-        // Add loading bubble immediately
-        const loadingId = `ai-greeting-loading-${Date.now()}`;
-        const loadingNote: NoteLike = {
-          id: loadingId,
-          text: "",
-          createdAt: new Date(),
-          isAI: true,
-          isLoading: true,
-        };
-        setAiGreetings((prev) => [...prev, loadingNote]);
+    // Add user's message to the chat feed immediately
+    const userMessageId = `user-msg-${Date.now()}`;
+    setChatMessages((prev) => [
+      ...prev,
+      {
+        id: userMessageId,
+        text: textToSave,
+        createdAt: new Date(),
+        isAI: false,
+      },
+    ]);
 
-        // Check if it's a question - use neuroscience answer, otherwise use greeting
-        if (isQuestion(textToSave)) {
-          generateNeuroscienceAnswer(textToSave)
-            .then((result) => {
-              setAiGreetings((prev) => {
-                const filtered = prev.filter((n) => n.id !== loadingId);
-                if (result.answer) {
-                  return [
-                    ...filtered,
-                    {
-                      id: `ai-answer-${Date.now()}`,
-                      text: result.answer,
-                      createdAt: new Date(),
-                      isAI: true,
-                    },
-                  ];
-                } else if (result.errorMessage) {
-                  // If error, fall back to greeting
-                  const userLocalHour = new Date().getHours();
-                  generateNoteGreeting(textToSave, userLocalHour)
-                    .then((greeting) => {
-                      if (greeting) {
-                        setAiGreetings((prev) => {
-                          const filtered2 = prev.filter((n) => n.id !== loadingId);
-                          return [
-                            ...filtered2,
-                            {
-                              id: `ai-greeting-${Date.now()}`,
-                              text: greeting,
-                              createdAt: new Date(),
-                              isAI: true,
-                            },
-                          ];
-                        });
-                      }
-                    });
-                }
-                return filtered;
-              });
-            })
-            .catch((error) => {
-              console.error("Error generating neuroscience answer:", error);
-              // Remove loading bubble on error
-              setAiGreetings((prev) => prev.filter((n) => n.id !== loadingId));
-            });
-        } else {
-          // Generate greeting and replace loading bubble
-          // Get user's local hour for accurate time-based greeting
-          const userLocalHour = new Date().getHours();
-          generateNoteGreeting(textToSave, userLocalHour)
-            .then((greeting) => {
-              setAiGreetings((prev) => {
-                // Remove loading bubble and add actual greeting
-                const filtered = prev.filter((n) => n.id !== loadingId);
-                if (greeting) {
-                  return [
-                    ...filtered,
-                    {
-                      id: `ai-greeting-${Date.now()}`,
-                      text: greeting,
-                      createdAt: new Date(),
-                      isAI: true,
-                    },
-                  ];
-                }
-                return filtered; // Remove loading if no greeting
-              });
-            })
-            .catch((error) => {
-              console.error("Error generating greeting:", error);
-              // Remove loading bubble on error
-              setAiGreetings((prev) => prev.filter((n) => n.id !== loadingId));
-            });
-        }
-      }
-    } else {
-      // First-time send (or re-send in create mode): persist once
+    // Clear text immediately
+    setNoteText("");
+
+    // Persist the note
+    if (isFirstMessage) {
       if (!user) {
         await upsertGuestNote(textToSave);
-
-        // Show guest login prompt
         toast.info("Please log in or sign up to save your notes", {
           duration: 5000,
           action: {
@@ -394,213 +401,32 @@ export default function NeuroscienceTextInput({
         if (res?.errorMessage) {
           const created = await createNeuroscienceAction(noteId);
           if (!created?.errorMessage) {
-            const updateRes = await updateNeuroscienceAction(noteId, textToSave);
-            toast.success("Note created successfully");
-
-            // Generate answer or greeting in the background after save completes
-            // Add loading bubble immediately
-            const loadingId = `ai-greeting-loading-${Date.now()}`;
-            const loadingNote: NoteLike = {
-              id: loadingId,
-              text: "",
-              createdAt: new Date(),
-              isAI: true,
-              isLoading: true,
-            };
-            setAiGreetings((prev) => [...prev, loadingNote]);
-
-            // Check if it's a question - use neuroscience answer, otherwise use greeting
-            if (isQuestion(textToSave)) {
-              generateNeuroscienceAnswer(textToSave)
-                .then((result) => {
-                  setAiGreetings((prev) => {
-                    const filtered = prev.filter((n) => n.id !== loadingId);
-                    if (result.answer) {
-                      return [
-                        ...filtered,
-                        {
-                          id: `ai-answer-${Date.now()}`,
-                          text: result.answer,
-                          createdAt: new Date(),
-                          isAI: true,
-                        },
-                      ];
-                    } else if (result.errorMessage) {
-                      // If error, fall back to greeting
-                      const userLocalHour2 = new Date().getHours();
-                      generateNoteGreeting(textToSave, userLocalHour2)
-                        .then((greeting) => {
-                          if (greeting) {
-                            setAiGreetings((prev) => {
-                              const filtered2 = prev.filter((n) => n.id !== loadingId);
-                              return [
-                                ...filtered2,
-                                {
-                                  id: `ai-greeting-${Date.now()}`,
-                                  text: greeting,
-                                  createdAt: new Date(),
-                                  isAI: true,
-                                },
-                              ];
-                            });
-                          }
-                        });
-                    }
-                    return filtered;
-                  });
-                })
-                .catch((error) => {
-                  console.error("Error generating neuroscience answer:", error);
-                  // Remove loading bubble on error
-                  setAiGreetings((prev) => prev.filter((n) => n.id !== loadingId));
-                });
-            } else {
-              // Generate greeting and replace loading bubble
-              // Get user's local hour for accurate time-based greeting
-              const userLocalHour2 = new Date().getHours();
-              generateNoteGreeting(textToSave, userLocalHour2)
-                .then((greeting) => {
-                  setAiGreetings((prev) => {
-                    // Remove loading bubble and add actual greeting
-                    const filtered = prev.filter((n) => n.id !== loadingId);
-                    if (greeting) {
-                      return [
-                        ...filtered,
-                        {
-                          id: `ai-greeting-${Date.now()}`,
-                          text: greeting,
-                          createdAt: new Date(),
-                          isAI: true,
-                        },
-                      ];
-                    }
-                    return filtered; // Remove loading if no greeting
-                  });
-                })
-                .catch((error) => {
-                  console.error("Error generating greeting:", error);
-                  // Remove loading bubble on error
-                  setAiGreetings((prev) =>
-                    prev.filter((n) => n.id !== loadingId),
-                  );
-                });
-            }
+            await updateNeuroscienceAction(noteId, textToSave);
           } else {
             toast.error("Failed to create note");
-            return; // Don't proceed with clearing if failed
-          }
-        } else {
-          toast.success("Note saved successfully");
-
-          // Generate answer or greeting in the background after save completes
-          // Add loading bubble immediately
-          const loadingId2 = `ai-greeting-loading-${Date.now()}`;
-          const loadingNote2: NoteLike = {
-            id: loadingId2,
-            text: "",
-            createdAt: new Date(),
-            isAI: true,
-            isLoading: true,
-          };
-          setAiGreetings((prev) => [...prev, loadingNote2]);
-
-          // Check if it's a question - use neuroscience answer, otherwise use greeting
-          if (isQuestion(textToSave)) {
-            generateNeuroscienceAnswer(textToSave)
-              .then((result) => {
-                setAiGreetings((prev) => {
-                  const filtered = prev.filter((n) => n.id !== loadingId2);
-                  if (result.answer) {
-                    return [
-                      ...filtered,
-                      {
-                        id: `ai-answer-${Date.now()}`,
-                        text: result.answer,
-                        createdAt: new Date(),
-                        isAI: true,
-                      },
-                    ];
-                  } else if (result.errorMessage) {
-                    // If error, fall back to greeting
-                    const userLocalHour3 = new Date().getHours();
-                    generateNoteGreeting(textToSave, userLocalHour3)
-                      .then((greeting) => {
-                        if (greeting) {
-                          setAiGreetings((prev) => {
-                            const filtered2 = prev.filter((n) => n.id !== loadingId2);
-                            return [
-                              ...filtered2,
-                              {
-                                id: `ai-greeting-${Date.now()}`,
-                                text: greeting,
-                                createdAt: new Date(),
-                                isAI: true,
-                              },
-                            ];
-                          });
-                        }
-                      });
-                  }
-                  return filtered;
-                });
-              })
-              .catch((error) => {
-                console.error("Error generating neuroscience answer:", error);
-                // Remove loading bubble on error
-                setAiGreetings((prev) => prev.filter((n) => n.id !== loadingId2));
-              });
-          } else {
-            // Generate greeting and replace loading bubble
-            // Get user's local hour for accurate time-based greeting
-            const userLocalHour3 = new Date().getHours();
-            generateNoteGreeting(textToSave, userLocalHour3)
-              .then((greeting) => {
-                setAiGreetings((prev) => {
-                  // Remove loading bubble and add actual greeting
-                  const filtered = prev.filter((n) => n.id !== loadingId2);
-                  if (greeting) {
-                    return [
-                      ...filtered,
-                      {
-                        id: `ai-greeting-${Date.now()}`,
-                        text: greeting,
-                        createdAt: new Date(),
-                        isAI: true,
-                      },
-                    ];
-                  }
-                  return filtered; // Remove loading if no greeting
-                });
-              })
-              .catch((error) => {
-                console.error("Error generating greeting:", error);
-                // Remove loading bubble on error
-                setAiGreetings((prev) => prev.filter((n) => n.id !== loadingId2));
-              });
+            return;
           }
         }
       }
     }
 
-    // Clear and hide composer so it no longer edits the note
-    setNoteText("");
-    setHideAfterSend(true);
-
+    // Move shell to top alignment
     const shell = document.getElementById("shell");
     shell?.classList.remove("justify-center");
     shell?.classList.add("justify-start");
 
-    // Add router refresh to update UI with new note (only for authenticated users)
-    // Refresh immediately - note is already saved, no need to wait
-    if (user) {
+    // Refresh to update sidebar (only for authenticated users)
+    if (user && isFirstMessage) {
       router.refresh();
     }
 
-    // Keep focus behavior the same
+    // Reset textarea height
     if (textareaRef.current) {
       textareaRef.current.style.height = "40px";
-      textareaRef.current.blur();
     }
+
+    // Stream AI response for every message
+    await streamAIResponse(textToSave);
   };
 
   const handleKeyDown = async (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
@@ -611,11 +437,13 @@ export default function NeuroscienceTextInput({
     }
   };
 
-  // Speech + Ask AI integrate with the local composer text only
+  // Speech integration
   const handleSpeechTranscript = (transcript: string) => {
     const newText = noteText ? `${noteText} ${transcript}` : transcript;
     setNoteText(newText);
-
+    if (!hasTyped && newText.length > 0) {
+      setHasTyped(true);
+    }
     if (textareaRef.current) {
       textareaRef.current.focus();
       textareaRef.current.setSelectionRange(newText.length, newText.length);
@@ -633,11 +461,7 @@ export default function NeuroscienceTextInput({
   };
 
   const handleEdit = (text: string) => {
-    // Enter explicit edit mode: load existing note into composer and show it
     setNoteText(text);
-    setIsEditing(true);
-    setHideAfterSend(false);
-
     requestAnimationFrame(() => {
       if (textareaRef.current) {
         const len = text.length;
@@ -648,71 +472,96 @@ export default function NeuroscienceTextInput({
   };
 
   return (
-    <div className="relative mx-auto flex w-full max-w-3xl flex-1 flex-col">
-      {/* Bubble (your UI untouched) */}
-      <NotesFeed notes={feed} onCopy={handleCopy} onEdit={handleEdit} />
-
-      {/* Composer (only visible when no note yet, or while editing) */}
-      {showComposer && (
-        <div className="relative flex w-full items-end px-3.5 py-2.5">
-          <div className="relative flex w-full max-w-4xl flex-col rounded-2xl border bg-white shadow dark:bg-gray-900">
-            <div className="relative">
-              <Textarea
-                ref={textareaRef}
-                value={noteText}
-                onChange={handleUpdateNote}
-                onKeyDown={handleKeyDown}
-                placeholder=""
-                className="custom-scrollbar flex-1 resize-none rounded-2xl border-0 bg-transparent pl-4 pr-28 py-4 shadow-none focus:ring-0 focus:outline-none focus-visible:ring-0 focus-visible:outline-none"
-                rows={1}
-                style={{ overflowY: "auto", minHeight: 48, maxHeight: 220 }}
-              />
-              {/* Buttons absolutely positioned on the right side */}
-              <div className="absolute right-2 top-1/2 -translate-y-1/2 flex items-center gap-1.5">
-                <MicrophoneButton onTranscript={handleSpeechTranscript} />
-                <NewNoteButton
-                  user={user}
-                  onSend={sendNote}
-                  disabled={!noteText.trim()}
-                />
-              </div>
-              {/* Typewriter placeholder - shows only on initial load, not after user has typed */}
-              {!noteText && !isEditing && !hasTyped && (
-                <div
-                  className="pointer-events-none absolute inset-0 flex items-start pl-4 pr-28 pt-4"
-                  suppressHydrationWarning
-                >
-                  <span
-                    suppressHydrationWarning
-                    className={
-                      isHydrated
-                        ? "typewriter-text text-muted-foreground text-base md:text-sm"
-                        : "text-muted-foreground text-base opacity-0 md:text-sm"
-                    }
-                    style={
-                      isHydrated
-                        ? {
-                            animation: `typewriter ${Math.min(greeting.length * 0.06, 2.5)}s steps(${greeting.length}) forwards`,
-                          }
-                        : undefined
-                    }
-                  >
-                    {greeting}
-                  </span>
-                </div>
-              )}
-              {/* Static placeholder for editing mode */}
-              {!noteText && isEditing && (
-                <div className="pointer-events-none absolute inset-0 flex items-start pl-4 pr-28 pt-4">
-                  <span className="text-muted-foreground text-base md:text-sm">
-                    Edit your note
-                  </span>
-                </div>
-              )}
-            </div>
-          </div>
+    <div
+      className={`relative mx-auto flex h-full w-full max-w-3xl flex-1 flex-col ${
+        hasContent ? "" : "justify-center"
+      }`}
+    >
+      {/* Chat feed */}
+      {hasContent && (
+        <div className="flex-1 min-h-0 overflow-y-auto">
+          <NotesFeed notes={feed} onCopy={handleCopy} onEdit={handleEdit} />
         </div>
       )}
+
+      {/* Composer — always visible for follow-up questions */}
+      <div className="relative flex w-full items-end px-3.5 py-2.5">
+        <div className="relative flex w-full max-w-4xl flex-col rounded-2xl border bg-white shadow dark:bg-gray-900">
+          <div className="relative">
+            <Textarea
+              ref={textareaRef}
+              value={noteText}
+              onChange={handleUpdateNote}
+              onKeyDown={handleKeyDown}
+              placeholder=""
+              disabled={isStreaming}
+              className="custom-scrollbar flex-1 resize-none rounded-2xl border-0 bg-transparent pl-4 pr-28 py-4 shadow-none focus:ring-0 focus:outline-none focus-visible:ring-0 focus-visible:outline-none"
+              rows={1}
+              style={{ overflowY: "auto", minHeight: 48, maxHeight: 220 }}
+            />
+            {/* Buttons absolutely positioned on the right side */}
+            <div className="absolute right-2 top-1/2 -translate-y-1/2 flex items-center gap-1.5">
+              {isStreaming ? (
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button
+                      onClick={handleStopStreaming}
+                      size="sm"
+                      variant="secondary"
+                      className="h-8 w-8 rounded-full border border-black bg-black p-0 text-white hover:bg-black/90 dark:border-white dark:bg-white dark:text-black dark:hover:bg-white/90"
+                    >
+                      <Square className="h-3.5 w-3.5" />
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent>Stop generating</TooltipContent>
+                </Tooltip>
+              ) : (
+                <>
+                  <MicrophoneButton onTranscript={handleSpeechTranscript} />
+                  <NewNoteButton
+                    user={user}
+                    onSend={sendNote}
+                    disabled={!noteText.trim()}
+                  />
+                </>
+              )}
+            </div>
+            {/* Typewriter placeholder - shows only on initial load, not after user has typed */}
+            {!noteText && !hasTyped && !hasContent && (
+              <div
+                className="pointer-events-none absolute inset-0 flex items-start pl-4 pr-28 pt-4"
+                suppressHydrationWarning
+              >
+                <span
+                  suppressHydrationWarning
+                  className={
+                    isHydrated
+                      ? "typewriter-text text-muted-foreground text-base md:text-sm"
+                      : "text-muted-foreground text-base opacity-0 md:text-sm"
+                  }
+                  style={
+                    isHydrated
+                      ? {
+                          animation: `typewriter ${Math.min(greeting.length * 0.06, 2.5)}s steps(${greeting.length}) forwards`,
+                        }
+                      : undefined
+                  }
+                >
+                  {greeting}
+                </span>
+              </div>
+            )}
+            {/* Follow-up placeholder */}
+            {!noteText && hasContent && !isStreaming && (
+              <div className="pointer-events-none absolute inset-0 flex items-start pl-4 pr-28 pt-4">
+                <span className="text-muted-foreground text-base md:text-sm">
+                  Ask a follow-up question...
+                </span>
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
     </div>
   );
 }

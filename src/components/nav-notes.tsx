@@ -171,7 +171,7 @@ export function NavNotes({ user }: Props) {
 
               {user ? (
                 <>
-                  {"token" in note && note.token && (
+                  {"token" in note && note.token && !isNeuroplasticity && (
                     <Tooltip>
                       <TooltipTrigger asChild>
                         <Button

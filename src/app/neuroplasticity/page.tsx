@@ -68,23 +68,19 @@ export default async function NeuroplasticityPage({ searchParams }: Props) {
       {!hasContentServer && (
         <div className="flex flex-col items-center mb-2">
           <div className="flex flex-col items-center gap-2 mb-4">
-            {/* Brain Icon + Neuroplasticity Title */}
+            {/* Brain Icon */}
             <div className="flex items-center gap-2">
               <Brain className="h-6 w-6 text-gray-800 dark:text-gray-200" />
-              <h1 className="text-2xl font-bold text-gray-800 dark:text-gray-200">
-                Neuroplasticity
-              </h1>
             </div>
             {/* Time-based Greeting with User Name */}
             <div className="flex items-center gap-2 text-gray-600 dark:text-gray-400">
               <span>{timeBasedGreeting}, {userName}!</span>
-              <span>👋</span>
             </div>
           </div>
         </div>
       )}
-      <div className="relative w-full max-w-4xl">
-        <div className="flex justify-center">
+      <div className="relative w-full max-w-4xl flex-1">
+        <div className="flex h-full justify-center">
           <NeuroscienceTextInput
             noteId={noteId}
             startingNoteText={note?.text || ""}
