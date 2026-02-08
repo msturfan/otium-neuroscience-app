@@ -26,26 +26,26 @@ export default function MessageBubble({
   onEdit,
 }: BubbleProps) {
   const time = timestamp ? new Date(timestamp).toLocaleTimeString() : undefined;
-  const renderFormattedText = (value: string) => {
+  const renderInlineHtml = (value: string) => {
     const escapeHtml = (input: string) =>
       input.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
 
-    const toInlineHtml = (input: string) => {
-      let html = escapeHtml(input);
-      html = html.replace(/\*\*(.+?)\*\*/g, "<strong>$1</strong>");
-      html = html.replace(/__(.+?)__/g, "<strong>$1</strong>");
-      html = html.replace(/(^|[^*])\*([^*]+)\*(?!\*)/g, "$1<em>$2</em>");
-      html = html.replace(/(^|[^_])_([^_]+)_(?!_)/g, "$1<em>$2</em>");
-      return html;
-    };
+    let html = escapeHtml(value);
+    html = html.replace(/\*\*(.+?)\*\*/g, "<strong>$1</strong>");
+    html = html.replace(/__(.+?)__/g, "<strong>$1</strong>");
+    html = html.replace(/(^|[^*])\*([^*]+)\*(?!\*)/g, "$1<em>$2</em>");
+    html = html.replace(/(^|[^_])_([^_]+)_(?!_)/g, "$1<em>$2</em>");
+    return html;
+  };
 
+  const renderInlineText = (value: string) => {
     const lines = value.split("\n");
     const nodes: React.ReactNode[] = [];
     lines.forEach((line, idx) => {
       nodes.push(
         <span
           key={`line-${idx}`}
-          dangerouslySetInnerHTML={{ __html: toInlineHtml(line) }}
+          dangerouslySetInnerHTML={{ __html: renderInlineHtml(line) }}
         />,
       );
       if (idx < lines.length - 1) {
@@ -55,14 +55,143 @@ export default function MessageBubble({
     return nodes;
   };
 
+  const renderAssistantContent = (value: string) => {
+    type Block =
+      | { type: "heading"; level: number; content: string }
+      | { type: "paragraph"; content: string }
+      | { type: "ul"; items: string[] }
+      | { type: "ol"; items: string[] };
+
+    const lines = value.split("\n");
+    const blocks: Block[] = [];
+    let paragraph: string[] = [];
+
+    const flushParagraph = () => {
+      if (paragraph.length > 0) {
+        blocks.push({ type: "paragraph", content: paragraph.join(" ").trim() });
+        paragraph = [];
+      }
+    };
+
+    let i = 0;
+    while (i < lines.length) {
+      const rawLine = lines[i];
+      const line = rawLine.trim();
+
+      if (!line) {
+        flushParagraph();
+        i += 1;
+        continue;
+      }
+
+      const headingMatch = line.match(/^(#{1,3})\s+(.*)$/);
+      if (headingMatch) {
+        flushParagraph();
+        blocks.push({
+          type: "heading",
+          level: headingMatch[1].length,
+          content: headingMatch[2].trim(),
+        });
+        i += 1;
+        continue;
+      }
+
+      const olMatch = line.match(/^\d+\.\s+(.*)$/);
+      if (olMatch) {
+        flushParagraph();
+        const items: string[] = [];
+        while (i < lines.length) {
+          const olLine = lines[i].trim();
+          const itemMatch = olLine.match(/^\d+\.\s+(.*)$/);
+          if (!itemMatch) break;
+          items.push(itemMatch[1].trim());
+          i += 1;
+        }
+        blocks.push({ type: "ol", items });
+        continue;
+      }
+
+      const ulMatch = line.match(/^[-*]\s+(.*)$/);
+      if (ulMatch) {
+        flushParagraph();
+        const items: string[] = [];
+        while (i < lines.length) {
+          const ulLine = lines[i].trim();
+          const itemMatch = ulLine.match(/^[-*]\s+(.*)$/);
+          if (!itemMatch) break;
+          items.push(itemMatch[1].trim());
+          i += 1;
+        }
+        blocks.push({ type: "ul", items });
+        continue;
+      }
+
+      paragraph.push(line);
+      i += 1;
+    }
+
+    flushParagraph();
+
+    return blocks.map((block, idx) => {
+      if (block.type === "heading") {
+        const Tag = block.level === 1 ? "h2" : block.level === 2 ? "h3" : "h4";
+        return (
+          <Tag
+            key={`h-${idx}`}
+            dangerouslySetInnerHTML={{ __html: renderInlineHtml(block.content) }}
+          />
+        );
+      }
+      if (block.type === "ul") {
+        return (
+          <ul key={`ul-${idx}`}>
+            {block.items.map((item, itemIdx) => (
+              <li
+                key={`ul-${idx}-${itemIdx}`}
+                dangerouslySetInnerHTML={{ __html: renderInlineHtml(item) }}
+              />
+            ))}
+          </ul>
+        );
+      }
+      if (block.type === "ol") {
+        return (
+          <ol key={`ol-${idx}`}>
+            {block.items.map((item, itemIdx) => (
+              <li
+                key={`ol-${idx}-${itemIdx}`}
+                dangerouslySetInnerHTML={{ __html: renderInlineHtml(item) }}
+              />
+            ))}
+          </ol>
+        );
+      }
+      return (
+        <p
+          key={`p-${idx}`}
+          dangerouslySetInnerHTML={{ __html: renderInlineHtml(block.content) }}
+        />
+      );
+    });
+  };
+
+  const bubbleClass = mine
+    ? "rounded-2xl p-3 break-words whitespace-pre-wrap shadow bg-primary text-primary-foreground"
+    : "w-full max-w-none p-0";
+
   return (
     <div className={`flex w-full ${mine ? "justify-end" : "justify-start"}`}>
-      <div className="group max-w-[75%] outline-none" tabIndex={0}>
+      <div
+        className={`group outline-none ${mine ? "max-w-[75%]" : "w-full max-w-none"}`}
+        tabIndex={0}
+      >
         {/* Bubble */}
         <div
           className={[
-            "rounded-2xl p-3 break-words whitespace-pre-wrap shadow",
-            mine ? "bg-primary text-primary-foreground" : "bg-muted",
+            bubbleClass,
+            mine
+              ? ""
+              : "prose prose-sm md:prose-base dark:prose-invert max-w-none leading-relaxed",
           ].join(" ")}
         >
           {isLoading ? (
@@ -72,11 +201,9 @@ export default function MessageBubble({
               <span className="h-2 w-2 rounded-full bg-current opacity-60 animate-[bounce_1.4s_ease-in-out_0.4s_infinite]"></span>
             </div>
           ) : (
-            <p>{renderFormattedText(text)}</p>
+            <div>{mine ? renderInlineText(text) : renderAssistantContent(text)}</div>
           )}
-          {time && !isLoading ? (
-            <span className="mt-1 block text-[10px] opacity-60">{time}</span>
-          ) : null}
+          {time && !isLoading ? null : null}
         </div>
 
         {/* Actions BELOW the bubble (hidden until hover/focus) */}
