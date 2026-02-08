@@ -22,6 +22,7 @@ import { useState, useTransition } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { toast } from "sonner";
 import { deleteNoteAction } from "@/actions/notes";
+import { deleteNeuroscienceAction } from "@/actions/neuroscience";
 import React from "react";
 
 type Props = {
@@ -29,6 +30,7 @@ type Props = {
   deleteNoteLocally: (noteId: string) => void;
   isGuest?: boolean;
   onGuestDelete?: () => void;
+  isNeuroscience?: boolean;
 };
 
 function NoteActions({
@@ -36,6 +38,7 @@ function NoteActions({
   deleteNoteLocally,
   isGuest = false,
   onGuestDelete,
+  isNeuroscience = false,
 }: Props) {
   const router = useRouter();
   const noteIdParam = useSearchParams().get("noteId") || "";
@@ -44,6 +47,9 @@ function NoteActions({
 
   const deleteRef = React.useRef<HTMLButtonElement>(null);
   const cancelRef = React.useRef<HTMLButtonElement>(null);
+  
+  const deleteAction = isNeuroscience ? deleteNeuroscienceAction : deleteNoteAction;
+  const redirectPath = isNeuroscience ? "/neuroplasticity" : "/";
 
   const handleDeleteNote = () => {
     if (isGuest && onGuestDelete) {
@@ -55,7 +61,7 @@ function NoteActions({
     }
 
     startTransition(async () => {
-      const { errorMessage } = await deleteNoteAction(noteId);
+      const { errorMessage } = await deleteAction(noteId);
 
       if (!errorMessage) {
         toast("Note Deleted", {
@@ -65,7 +71,7 @@ function NoteActions({
         deleteNoteLocally(noteId);
 
         if (noteId === noteIdParam) {
-          router.replace("/");
+          router.replace(redirectPath);
         }
       } else {
         toast("Error", {
@@ -76,8 +82,6 @@ function NoteActions({
   };
 
   const handleArchiveNote = () => {
-    // For now, we'll just delete the note as requested
-    // In the future, this will be replaced with archive functionality
     if (isGuest && onGuestDelete) {
       onGuestDelete();
       toast("Note Archived", {
@@ -87,7 +91,7 @@ function NoteActions({
     }
 
     startTransition(async () => {
-      const { errorMessage } = await deleteNoteAction(noteId);
+      const { errorMessage } = await deleteAction(noteId);
 
       if (!errorMessage) {
         toast("Note Archived", {
@@ -97,7 +101,7 @@ function NoteActions({
         deleteNoteLocally(noteId);
 
         if (noteId === noteIdParam) {
-          router.replace("/");
+          router.replace(redirectPath);
         }
       } else {
         toast("Error", {

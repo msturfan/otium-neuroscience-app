@@ -3,6 +3,7 @@
 import * as React from "react";
 import { useRouter, usePathname } from "next/navigation";
 import { ChevronDown, Plus } from "lucide-react";
+import { User } from "@supabase/supabase-js";
 
 import {
   DropdownMenu,
@@ -21,6 +22,7 @@ import {
 
 export function TeamSwitcher({
   teams,
+  user,
 }: {
   teams: {
     name: string;
@@ -28,6 +30,7 @@ export function TeamSwitcher({
     plan: string;
     url?: string;
   }[];
+  user: User | null;
 }) {
   const router = useRouter();
   const pathname = usePathname();
@@ -61,10 +64,34 @@ export function TeamSwitcher({
     return null;
   }
 
-  const handleTeamClick = (team: typeof teams[0]) => {
-    setActiveTeam(team);
+  const handleTeamClick = (team: typeof teams[0], e?: React.MouseEvent) => {
+    if (e) {
+      e.preventDefault();
+      e.stopPropagation();
+    }
+    
     if (team.url) {
-      router.push(team.url);
+      // If guest user tries to access neuroplasticity, redirect to signup
+      if (team.url === "/neuroplasticity" && !user) {
+        router.push("/sign-up");
+        return;
+      }
+      
+      // For neuroplasticity, always include a noteId to avoid redirect
+      // Use push instead of replace to ensure navigation happens
+      if (team.url === "/neuroplasticity") {
+        const newId = crypto.randomUUID();
+        router.push(`/neuroplasticity?noteId=${newId}`);
+      } else if (team.url === "/") {
+        // For home page, also ensure we navigate with a noteId
+        const newId = crypto.randomUUID();
+        router.push(`/?noteId=${newId}`);
+      } else {
+        router.push(team.url);
+      }
+      
+      // Update active team
+      setActiveTeam(team);
     }
   };
 
@@ -93,7 +120,7 @@ export function TeamSwitcher({
             {teams.map((team, index) => (
               <DropdownMenuItem
                 key={team.name}
-                onClick={() => handleTeamClick(team)}
+                onClick={(e) => handleTeamClick(team, e)}
                 className="gap-2 p-2"
               >
                 <div className="flex size-6 items-center justify-center rounded-full border overflow-hidden">

@@ -145,7 +145,7 @@ export function AppSidebar({
   return (
     <Sidebar className="border-r-0" {...props}>
       <SidebarHeader>
-        <TeamSwitcher teams={data.teams} />
+        <TeamSwitcher teams={data.teams} user={user} />
         <div className="flex flex-col gap-2">
           <SearchCommand />
           <NavMain items={data.navMain} />
