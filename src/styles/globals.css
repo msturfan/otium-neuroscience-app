@@ -139,6 +139,10 @@
     display: none; /* Chrome, Safari and Opera */
   }
 
+  .field-sizing-fixed {
+    field-sizing: fixed;
+  }
+
   /* Chat-style textarea scrollbar: hidden until hover/focus */
   .custom-scrollbar {
     overflow-y: auto;
