@@ -1,6 +1,6 @@
 "use client";
 
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { type LucideIcon } from "lucide-react";
 
 import {
@@ -20,6 +20,7 @@ export function NavMain({
   }[];
 }) {
   const pathname = usePathname();
+  const router = useRouter();
 
   const isItemActive = (url: string) => {
     // Handle root path - only active when pathname is exactly "/"
@@ -34,15 +35,35 @@ export function NavMain({
     return pathname.startsWith(url);
   };
 
+  const handleNewNoteClick = (e: React.MouseEvent<HTMLAnchorElement>) => {
+    e.preventDefault();
+    const newId = crypto.randomUUID();
+    
+    // If on neuroplasticity page, create new neuroplasticity note
+    if (pathname.startsWith("/neuroplasticity")) {
+      router.push(`/neuroplasticity?noteId=${newId}`);
+    } else {
+      // Otherwise, create new regular note
+      router.push(`/?noteId=${newId}`);
+    }
+  };
+
   return (
     <SidebarMenu>
       {items.map((item) => (
         <SidebarMenuItem key={item.title}>
           <SidebarMenuButton asChild isActive={isItemActive(item.url)}>
-            <a href={item.url}>
-              <item.icon />
-              <span>{item.title}</span>
-            </a>
+            {item.title === "New note" ? (
+              <a href={item.url} onClick={handleNewNoteClick}>
+                <item.icon />
+                <span>{item.title}</span>
+              </a>
+            ) : (
+              <a href={item.url}>
+                <item.icon />
+                <span>{item.title}</span>
+              </a>
+            )}
           </SidebarMenuButton>
         </SidebarMenuItem>
       ))}

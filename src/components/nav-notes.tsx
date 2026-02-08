@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useRouter, useSearchParams, usePathname } from "next/navigation";
 import { Copy, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import Image from "next/image";
@@ -19,6 +19,7 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import { fetchUserNotesAction } from "@/actions/notes";
+import { fetchUserNeuroscienceAction } from "@/actions/neuroscience";
 import { formatNoteDate } from "@/lib/utils";
 import { Badge } from "@/components/ui/badge";
 import useNote from "@/hooks/useNote";
@@ -29,7 +30,7 @@ type UserNote = {
   id: string;
   text: string;
   title?: string | null;
-  token?: string; // Make token optional temporarily
+  token?: string;
   createdAt: Date;
 };
 
@@ -39,19 +40,24 @@ type Props = {
 
 export function NavNotes({ user }: Props) {
   const router = useRouter();
+  const pathname = usePathname();
   const searchParams = useSearchParams();
   const currentNoteId = searchParams.get("noteId");
+  
+  const isNeuroplasticity = pathname.startsWith("/neuroplasticity");
 
   const [userNotes, setUserNotes] = useState<UserNote[]>([]);
   const [loading, setLoading] = useState(true);
   const { guestNotes, deleteGuestNote } = useNote();
 
-  // Fetch user notes on mount or when user changes
+  // Fetch user notes on mount or when user/path changes
   useEffect(() => {
     const fetchNotes = async () => {
       if (user) {
         setLoading(true);
-        const { notes, errorMessage } = await fetchUserNotesAction();
+        const { notes, errorMessage } = isNeuroplasticity 
+          ? await fetchUserNeuroscienceAction()
+          : await fetchUserNotesAction();
         if (!errorMessage) {
           setUserNotes(notes);
         } else {
@@ -65,10 +71,11 @@ export function NavNotes({ user }: Props) {
     };
 
     fetchNotes();
-  }, [user]);
+  }, [user, isNeuroplasticity]);
 
   const handleNoteClick = (noteId: string) => {
-    router.push(`/?noteId=${noteId}`);
+    const basePath = isNeuroplasticity ? "/neuroplasticity" : "/";
+    router.push(`${basePath}?noteId=${noteId}`);
   };
 
   const handleCopyLink = (token: string | undefined) => {
@@ -109,7 +116,7 @@ export function NavNotes({ user }: Props) {
   if (loading) {
     return (
       <SidebarGroup>
-        <SidebarGroupLabel>My Notes</SidebarGroupLabel>
+        <SidebarGroupLabel>{isNeuroplasticity ? "Neuroscience" : "My Notes"}</SidebarGroupLabel>
         <div className="flex items-center justify-center py-8">
           <Loader2 className="text-muted-foreground h-6 w-6 animate-spin" />
         </div>
@@ -120,7 +127,7 @@ export function NavNotes({ user }: Props) {
   return (
     <SidebarGroup>
       <SidebarGroupLabel>
-        My Notes
+        {isNeuroplasticity ? "Neuroscience" : "My Notes"}
         {isGuest && (
           <Badge variant="secondary" className="ml-2 text-xs">
             Guest
@@ -184,6 +191,7 @@ export function NavNotes({ user }: Props) {
                   <NoteActions
                     noteId={note.id}
                     deleteNoteLocally={deleteNoteLocally}
+                    isNeuroscience={isNeuroplasticity}
                   />
                 </>
               ) : (
@@ -192,6 +200,7 @@ export function NavNotes({ user }: Props) {
                   deleteNoteLocally={deleteNoteLocally}
                   isGuest={true}
                   onGuestDelete={() => deleteGuestNote(note.id)}
+                  isNeuroscience={isNeuroplasticity}
                 />
               )}
             </SidebarMenuItem>

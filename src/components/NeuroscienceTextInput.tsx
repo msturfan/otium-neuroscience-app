@@ -11,11 +11,11 @@ import NotesFeed, { NoteLike } from "./NotesFeed";
 
 import useNote from "@/hooks/useNote";
 import { GuestNote } from "@/providers/NoteProvider";
-import { updateNoteAction, createNoteAction } from "@/actions/notes";
+import { updateNeuroscienceAction, createNeuroscienceAction } from "@/actions/neuroscience";
 import { generateNoteTitle } from "@/actions/generate-title";
 import { generateNoteGreeting } from "@/actions/generate-greeting";
+import { generateNeuroscienceAnswer } from "@/actions/generate-neuroscience-answer";
 import MicrophoneButton from "./MicrophoneButton";
-import AskAIButton from "./AskAIButton";
 
 type Props = {
   noteId: string;
@@ -25,7 +25,7 @@ type Props = {
   greeting?: string;
 };
 
-export default function NoteTextInput({
+export default function NeuroscienceTextInput({
   noteId,
   startingNoteText,
   user,
@@ -103,7 +103,7 @@ export default function NoteTextInput({
         );
         if (greetingsToSave.length > 0) {
           const serialized = JSON.stringify(greetingsToSave);
-          sessionStorage.setItem(`ai-greetings-${noteId}`, serialized);
+          sessionStorage.setItem(`ai-greetings-neuro-${noteId}`, serialized);
         }
       } catch (error) {
         console.error("Failed to save AI greetings to sessionStorage:", error);
@@ -126,7 +126,7 @@ export default function NoteTextInput({
       // Load greetings for the new note if it has content
       if (typeof window !== "undefined" && hasUserNoteContent) {
         try {
-          const stored = sessionStorage.getItem(`ai-greetings-${noteId}`);
+          const stored = sessionStorage.getItem(`ai-greetings-neuro-${noteId}`);
           if (stored) {
             const parsed = JSON.parse(stored);
             // Only load if we have content and greetings exist
@@ -147,7 +147,7 @@ export default function NoteTextInput({
         // Only load greetings if not already loaded
         if (aiGreetings.length === 0) {
           try {
-            const stored = sessionStorage.getItem(`ai-greetings-${noteId}`);
+            const stored = sessionStorage.getItem(`ai-greetings-neuro-${noteId}`);
             if (stored) {
               const parsed = JSON.parse(stored);
               if (parsed.length > 0) {
@@ -166,7 +166,7 @@ export default function NoteTextInput({
         setAiGreetings([]);
         // Also clear from sessionStorage for this noteId
         try {
-          sessionStorage.removeItem(`ai-greetings-${noteId}`);
+          sessionStorage.removeItem(`ai-greetings-neuro-${noteId}`);
         } catch (error) {
           // Ignore errors when clearing
         }
@@ -210,6 +210,16 @@ export default function NoteTextInput({
   }, [noteText]);
 
   // ---------- Helpers ----------
+  // Check if text is a question (ends with ? or starts with question words)
+  const isQuestion = (text: string): boolean => {
+    const trimmed = text.trim();
+    if (trimmed.endsWith("?")) return true;
+    
+    const questionWords = ["what", "how", "why", "when", "where", "who", "which", "is", "are", "can", "could", "does", "do", "will", "would", "should", "explain", "tell me", "describe"];
+    const firstWord = trimmed.toLowerCase().split(/\s+/)[0];
+    return questionWords.some(word => firstWord.startsWith(word));
+  };
+
   const upsertGuestNote = async (text: string) => {
     const existing = guestNotes.find((n) => n.id === noteId);
 
@@ -228,11 +238,11 @@ export default function NoteTextInput({
 
   // Only autosave while EDITING.
   const scheduleSave = (text: string) => {
-    if (!isEditing) return; // â† important: do NOT touch the saved note while composing a new one
+    if (!isEditing) return; // ← important: do NOT touch the saved note while composing a new one
     if (updateTimeoutRef.current) clearTimeout(updateTimeoutRef.current);
     updateTimeoutRef.current = setTimeout(async () => {
       if (!user) await upsertGuestNote(text);
-      else updateNoteAction(noteId, text);
+      else updateNeuroscienceAction(noteId, text);
     }, 1200);
   };
 
@@ -243,11 +253,11 @@ export default function NoteTextInput({
       await upsertGuestNote(text);
       return null;
     }
-    const res = await updateNoteAction(noteId, text);
+    const res = await updateNeuroscienceAction(noteId, text);
     if (res?.errorMessage) {
-      const created = await createNoteAction(noteId);
+      const created = await createNeuroscienceAction(noteId);
       if (!created?.errorMessage) {
-        const updateRes = await updateNoteAction(noteId, text);
+        const updateRes = await updateNeuroscienceAction(noteId, text);
         return updateRes;
       }
       return null;
@@ -278,7 +288,7 @@ export default function NoteTextInput({
       setIsEditing(false);
       toast.success("Note updated successfully");
 
-      // Generate greeting in the background after save completes
+      // Generate answer or greeting in the background after save completes
       if (res && !res.errorMessage) {
         // Add loading bubble immediately
         const loadingId = `ai-greeting-loading-${Date.now()}`;
@@ -291,131 +301,60 @@ export default function NoteTextInput({
         };
         setAiGreetings((prev) => [...prev, loadingNote]);
 
-        // Generate greeting and replace loading bubble
-        // Get user's local hour for accurate time-based greeting
-        const userLocalHour = new Date().getHours();
-        generateNoteGreeting(textToSave, userLocalHour)
-          .then((greeting) => {
-            setAiGreetings((prev) => {
-              // Remove loading bubble and add actual greeting
-              const filtered = prev.filter((n) => n.id !== loadingId);
-              if (greeting) {
-                return [
-                  ...filtered,
-                  {
-                    id: `ai-greeting-${Date.now()}`,
-                    text: greeting,
-                    createdAt: new Date(),
-                    isAI: true,
-                  },
-                ];
-              }
-              return filtered; // Remove loading if no greeting
-            });
-          })
-          .catch((error) => {
-            console.error("Error generating greeting:", error);
-            // Remove loading bubble on error
-            setAiGreetings((prev) => prev.filter((n) => n.id !== loadingId));
-          });
-      }
-    } else {
-      // First-time send (or re-send in create mode): persist once
-      if (!user) {
-        await upsertGuestNote(textToSave);
-
-        // Show guest login prompt
-        toast.info("Please log in or sign up to save your notes", {
-          duration: 5000,
-          action: {
-            label: "Log in",
-            onClick: () => router.push("/login"),
-          },
-        });
-      } else {
-        const res = await updateNoteAction(noteId, textToSave);
-        if (res?.errorMessage) {
-          const created = await createNoteAction(noteId);
-          if (!created?.errorMessage) {
-            const updateRes = await updateNoteAction(noteId, textToSave);
-            toast.success("Note created successfully");
-            // Check if this is the first note of the day
-            if (updateRes?.isFirstNoteOfDay && user) {
-              window.dispatchEvent(new CustomEvent("firstDailyNoteSaved"));
-            }
-
-            // Generate greeting in the background after save completes
-            // Add loading bubble immediately
-            const loadingId = `ai-greeting-loading-${Date.now()}`;
-            const loadingNote: NoteLike = {
-              id: loadingId,
-              text: "",
-              createdAt: new Date(),
-              isAI: true,
-              isLoading: true,
-            };
-            setAiGreetings((prev) => [...prev, loadingNote]);
-
-            // Generate greeting and replace loading bubble
-            // Get user's local hour for accurate time-based greeting
-            const userLocalHour2 = new Date().getHours();
-            generateNoteGreeting(textToSave, userLocalHour2)
-              .then((greeting) => {
-                setAiGreetings((prev) => {
-                  // Remove loading bubble and add actual greeting
-                  const filtered = prev.filter((n) => n.id !== loadingId);
-                  if (greeting) {
-                    return [
-                      ...filtered,
-                      {
-                        id: `ai-greeting-${Date.now()}`,
-                        text: greeting,
-                        createdAt: new Date(),
-                        isAI: true,
-                      },
-                    ];
-                  }
-                  return filtered; // Remove loading if no greeting
-                });
-              })
-              .catch((error) => {
-                console.error("Error generating greeting:", error);
-                // Remove loading bubble on error
-                setAiGreetings((prev) =>
-                  prev.filter((n) => n.id !== loadingId),
-                );
+        // Check if it's a question - use neuroscience answer, otherwise use greeting
+        if (isQuestion(textToSave)) {
+          generateNeuroscienceAnswer(textToSave)
+            .then((result) => {
+              setAiGreetings((prev) => {
+                const filtered = prev.filter((n) => n.id !== loadingId);
+                if (result.answer) {
+                  return [
+                    ...filtered,
+                    {
+                      id: `ai-answer-${Date.now()}`,
+                      text: result.answer,
+                      createdAt: new Date(),
+                      isAI: true,
+                    },
+                  ];
+                } else if (result.errorMessage) {
+                  // If error, fall back to greeting
+                  const userLocalHour = new Date().getHours();
+                  generateNoteGreeting(textToSave, userLocalHour)
+                    .then((greeting) => {
+                      if (greeting) {
+                        setAiGreetings((prev) => {
+                          const filtered2 = prev.filter((n) => n.id !== loadingId);
+                          return [
+                            ...filtered2,
+                            {
+                              id: `ai-greeting-${Date.now()}`,
+                              text: greeting,
+                              createdAt: new Date(),
+                              isAI: true,
+                            },
+                          ];
+                        });
+                      }
+                    });
+                }
+                return filtered;
               });
-          } else {
-            toast.error("Failed to create note");
-            return; // Don't proceed with clearing if failed
-          }
+            })
+            .catch((error) => {
+              console.error("Error generating neuroscience answer:", error);
+              // Remove loading bubble on error
+              setAiGreetings((prev) => prev.filter((n) => n.id !== loadingId));
+            });
         } else {
-          toast.success("Note saved successfully");
-          // Check if this is the first note of the day
-          if (res?.isFirstNoteOfDay && user) {
-            window.dispatchEvent(new CustomEvent("firstDailyNoteSaved"));
-          }
-
-          // Generate greeting in the background after save completes
-          // Add loading bubble immediately
-          const loadingId2 = `ai-greeting-loading-${Date.now()}`;
-          const loadingNote2: NoteLike = {
-            id: loadingId2,
-            text: "",
-            createdAt: new Date(),
-            isAI: true,
-            isLoading: true,
-          };
-          setAiGreetings((prev) => [...prev, loadingNote2]);
-
           // Generate greeting and replace loading bubble
           // Get user's local hour for accurate time-based greeting
-          const userLocalHour3 = new Date().getHours();
-          generateNoteGreeting(textToSave, userLocalHour3)
+          const userLocalHour = new Date().getHours();
+          generateNoteGreeting(textToSave, userLocalHour)
             .then((greeting) => {
               setAiGreetings((prev) => {
                 // Remove loading bubble and add actual greeting
-                const filtered = prev.filter((n) => n.id !== loadingId2);
+                const filtered = prev.filter((n) => n.id !== loadingId);
                 if (greeting) {
                   return [
                     ...filtered,
@@ -433,8 +372,212 @@ export default function NoteTextInput({
             .catch((error) => {
               console.error("Error generating greeting:", error);
               // Remove loading bubble on error
-              setAiGreetings((prev) => prev.filter((n) => n.id !== loadingId2));
+              setAiGreetings((prev) => prev.filter((n) => n.id !== loadingId));
             });
+        }
+      }
+    } else {
+      // First-time send (or re-send in create mode): persist once
+      if (!user) {
+        await upsertGuestNote(textToSave);
+
+        // Show guest login prompt
+        toast.info("Please log in or sign up to save your notes", {
+          duration: 5000,
+          action: {
+            label: "Log in",
+            onClick: () => router.push("/login"),
+          },
+        });
+      } else {
+        const res = await updateNeuroscienceAction(noteId, textToSave);
+        if (res?.errorMessage) {
+          const created = await createNeuroscienceAction(noteId);
+          if (!created?.errorMessage) {
+            const updateRes = await updateNeuroscienceAction(noteId, textToSave);
+            toast.success("Note created successfully");
+
+            // Generate answer or greeting in the background after save completes
+            // Add loading bubble immediately
+            const loadingId = `ai-greeting-loading-${Date.now()}`;
+            const loadingNote: NoteLike = {
+              id: loadingId,
+              text: "",
+              createdAt: new Date(),
+              isAI: true,
+              isLoading: true,
+            };
+            setAiGreetings((prev) => [...prev, loadingNote]);
+
+            // Check if it's a question - use neuroscience answer, otherwise use greeting
+            if (isQuestion(textToSave)) {
+              generateNeuroscienceAnswer(textToSave)
+                .then((result) => {
+                  setAiGreetings((prev) => {
+                    const filtered = prev.filter((n) => n.id !== loadingId);
+                    if (result.answer) {
+                      return [
+                        ...filtered,
+                        {
+                          id: `ai-answer-${Date.now()}`,
+                          text: result.answer,
+                          createdAt: new Date(),
+                          isAI: true,
+                        },
+                      ];
+                    } else if (result.errorMessage) {
+                      // If error, fall back to greeting
+                      const userLocalHour2 = new Date().getHours();
+                      generateNoteGreeting(textToSave, userLocalHour2)
+                        .then((greeting) => {
+                          if (greeting) {
+                            setAiGreetings((prev) => {
+                              const filtered2 = prev.filter((n) => n.id !== loadingId);
+                              return [
+                                ...filtered2,
+                                {
+                                  id: `ai-greeting-${Date.now()}`,
+                                  text: greeting,
+                                  createdAt: new Date(),
+                                  isAI: true,
+                                },
+                              ];
+                            });
+                          }
+                        });
+                    }
+                    return filtered;
+                  });
+                })
+                .catch((error) => {
+                  console.error("Error generating neuroscience answer:", error);
+                  // Remove loading bubble on error
+                  setAiGreetings((prev) => prev.filter((n) => n.id !== loadingId));
+                });
+            } else {
+              // Generate greeting and replace loading bubble
+              // Get user's local hour for accurate time-based greeting
+              const userLocalHour2 = new Date().getHours();
+              generateNoteGreeting(textToSave, userLocalHour2)
+                .then((greeting) => {
+                  setAiGreetings((prev) => {
+                    // Remove loading bubble and add actual greeting
+                    const filtered = prev.filter((n) => n.id !== loadingId);
+                    if (greeting) {
+                      return [
+                        ...filtered,
+                        {
+                          id: `ai-greeting-${Date.now()}`,
+                          text: greeting,
+                          createdAt: new Date(),
+                          isAI: true,
+                        },
+                      ];
+                    }
+                    return filtered; // Remove loading if no greeting
+                  });
+                })
+                .catch((error) => {
+                  console.error("Error generating greeting:", error);
+                  // Remove loading bubble on error
+                  setAiGreetings((prev) =>
+                    prev.filter((n) => n.id !== loadingId),
+                  );
+                });
+            }
+          } else {
+            toast.error("Failed to create note");
+            return; // Don't proceed with clearing if failed
+          }
+        } else {
+          toast.success("Note saved successfully");
+
+          // Generate answer or greeting in the background after save completes
+          // Add loading bubble immediately
+          const loadingId2 = `ai-greeting-loading-${Date.now()}`;
+          const loadingNote2: NoteLike = {
+            id: loadingId2,
+            text: "",
+            createdAt: new Date(),
+            isAI: true,
+            isLoading: true,
+          };
+          setAiGreetings((prev) => [...prev, loadingNote2]);
+
+          // Check if it's a question - use neuroscience answer, otherwise use greeting
+          if (isQuestion(textToSave)) {
+            generateNeuroscienceAnswer(textToSave)
+              .then((result) => {
+                setAiGreetings((prev) => {
+                  const filtered = prev.filter((n) => n.id !== loadingId2);
+                  if (result.answer) {
+                    return [
+                      ...filtered,
+                      {
+                        id: `ai-answer-${Date.now()}`,
+                        text: result.answer,
+                        createdAt: new Date(),
+                        isAI: true,
+                      },
+                    ];
+                  } else if (result.errorMessage) {
+                    // If error, fall back to greeting
+                    const userLocalHour3 = new Date().getHours();
+                    generateNoteGreeting(textToSave, userLocalHour3)
+                      .then((greeting) => {
+                        if (greeting) {
+                          setAiGreetings((prev) => {
+                            const filtered2 = prev.filter((n) => n.id !== loadingId2);
+                            return [
+                              ...filtered2,
+                              {
+                                id: `ai-greeting-${Date.now()}`,
+                                text: greeting,
+                                createdAt: new Date(),
+                                isAI: true,
+                              },
+                            ];
+                          });
+                        }
+                      });
+                  }
+                  return filtered;
+                });
+              })
+              .catch((error) => {
+                console.error("Error generating neuroscience answer:", error);
+                // Remove loading bubble on error
+                setAiGreetings((prev) => prev.filter((n) => n.id !== loadingId2));
+              });
+          } else {
+            // Generate greeting and replace loading bubble
+            // Get user's local hour for accurate time-based greeting
+            const userLocalHour3 = new Date().getHours();
+            generateNoteGreeting(textToSave, userLocalHour3)
+              .then((greeting) => {
+                setAiGreetings((prev) => {
+                  // Remove loading bubble and add actual greeting
+                  const filtered = prev.filter((n) => n.id !== loadingId2);
+                  if (greeting) {
+                    return [
+                      ...filtered,
+                      {
+                        id: `ai-greeting-${Date.now()}`,
+                        text: greeting,
+                        createdAt: new Date(),
+                        isAI: true,
+                      },
+                    ];
+                  }
+                  return filtered; // Remove loading if no greeting
+                });
+              })
+              .catch((error) => {
+                console.error("Error generating greeting:", error);
+                // Remove loading bubble on error
+                setAiGreetings((prev) => prev.filter((n) => n.id !== loadingId2));
+              });
+          }
         }
       }
     }
@@ -527,7 +670,6 @@ export default function NoteTextInput({
               {/* Buttons absolutely positioned on the right side */}
               <div className="absolute right-2 top-1/2 -translate-y-1/2 flex items-center gap-1.5">
                 <MicrophoneButton onTranscript={handleSpeechTranscript} />
-                <AskAIButton user={user} noteText={noteText} />
                 <NewNoteButton
                   user={user}
                   onSend={sendNote}
