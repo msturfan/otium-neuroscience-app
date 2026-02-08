@@ -7,7 +7,6 @@ import NeuroscienceTextInput from "@/components/NeuroscienceTextInput";
 import { getNeuroscienceGreeting } from "@/lib/neuroscience-greetings-server";
 import { getTimeBasedGreeting } from "@/lib/get-time-based-greeting";
 import { getUserProfile } from "@/lib/user-utils";
-import { Brain } from "lucide-react";
 
 type Props = {
   searchParams?: Promise<Record<string, string | string[] | undefined>>;
@@ -61,32 +60,19 @@ export default async function NeuroplasticityPage({ searchParams }: Props) {
   return (
     <div
       id="shell"
-      className={`flex h-full flex-col items-center ${
+      className={`flex h-full min-h-0 flex-col items-center ${
         hasContentServer ? "justify-start" : "justify-center"
       } gap-4 px-4`}
     >
-      {!hasContentServer && (
-        <div className="flex flex-col items-center mb-2">
-          <div className="flex flex-col items-center gap-2 mb-4">
-            {/* Brain Icon */}
-            <div className="flex items-center gap-2">
-              <Brain className="h-6 w-6 text-gray-800 dark:text-gray-200" />
-            </div>
-            {/* Time-based Greeting with User Name */}
-            <div className="flex items-center gap-2 text-gray-600 dark:text-gray-400">
-              <span>{timeBasedGreeting}, {userName}!</span>
-            </div>
-          </div>
-        </div>
-      )}
-      <div className="relative w-full max-w-4xl flex-1">
-        <div className="flex h-full justify-center">
+      <div className="relative w-full max-w-4xl flex-1 min-h-0">
+        <div className="flex h-full min-h-0 justify-center">
           <NeuroscienceTextInput
             noteId={noteId}
             startingNoteText={note?.text || ""}
             user={user}
             feedNotes={feedNotes}
             greeting={greeting}
+            welcomeMessage={`${timeBasedGreeting}, ${userName}!`}
           />
         </div>
         <HomeToaster />

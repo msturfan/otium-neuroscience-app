@@ -33,9 +33,7 @@ export default function NotesFeed({ notes, onCopy, onEdit }: Props) {
   }, [visible.length, lastMessageText, lastMessageLoading]);
 
   return (
-    <div
-      ref={boxRef}
-    >
+    <div ref={boxRef} className="w-full space-y-6">
       {visible.map((n) => (
         <MessageBubble
           key={n.id}

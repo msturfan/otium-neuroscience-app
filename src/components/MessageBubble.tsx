@@ -132,7 +132,9 @@ export default function MessageBubble({
 
     flushParagraph();
 
-    return blocks.map((block, idx) => {
+    return (
+      <div className="space-y-3 md:space-y-4">
+        {blocks.map((block, idx) => {
       if (block.type === "heading") {
         const Tag = block.level === 1 ? "h2" : block.level === 2 ? "h3" : "h4";
         return (
@@ -166,13 +168,15 @@ export default function MessageBubble({
           </ol>
         );
       }
-      return (
-        <p
-          key={`p-${idx}`}
-          dangerouslySetInnerHTML={{ __html: renderInlineHtml(block.content) }}
-        />
-      );
-    });
+        return (
+          <p
+            key={`p-${idx}`}
+            dangerouslySetInnerHTML={{ __html: renderInlineHtml(block.content) }}
+          />
+        );
+      })}
+      </div>
+    );
   };
 
   const bubbleClass = mine
@@ -191,7 +195,14 @@ export default function MessageBubble({
             bubbleClass,
             mine
               ? ""
-              : "prose prose-sm md:prose-base dark:prose-invert max-w-none leading-relaxed",
+              : [
+                  "prose prose-sm md:prose-base dark:prose-invert max-w-none leading-relaxed",
+                  "prose-headings:font-semibold prose-headings:text-gray-900 dark:prose-headings:text-gray-100",
+                  "prose-p:my-3 prose-p:leading-7",
+                  "prose-ul:my-3 prose-ol:my-3 prose-li:my-1.5",
+                  "prose-ul:pl-5 prose-ol:pl-5",
+                  "prose-strong:text-gray-900 dark:prose-strong:text-gray-100",
+                ].join(" "),
           ].join(" ")}
         >
           {isLoading ? (

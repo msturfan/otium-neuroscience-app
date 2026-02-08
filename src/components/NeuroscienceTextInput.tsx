@@ -4,7 +4,7 @@ import { useSearchParams, useRouter } from "next/navigation";
 import { ChangeEvent, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
 import { User } from "@supabase/supabase-js";
-import { Square } from "lucide-react";
+import { Brain, Square } from "lucide-react";
 
 import { Textarea } from "./ui/textarea";
 import NewNoteButton from "./NewNoteButton";
@@ -28,6 +28,7 @@ type Props = {
   user: User | null;
   feedNotes?: NoteLike[];
   greeting?: string;
+  welcomeMessage?: string;
 };
 
 export default function NeuroscienceTextInput({
@@ -36,6 +37,7 @@ export default function NeuroscienceTextInput({
   user,
   feedNotes = [],
   greeting = "What's on your mind?",
+  welcomeMessage,
 }: Props) {
   const search = useSearchParams();
   const router = useRouter();
@@ -473,14 +475,31 @@ export default function NeuroscienceTextInput({
 
   return (
     <div
-      className={`relative mx-auto flex h-full w-full max-w-3xl flex-1 flex-col ${
+      className={`relative mx-auto flex h-full w-full max-w-3xl flex-1 min-h-0 flex-col ${
         hasContent ? "" : "justify-center"
       }`}
     >
       {/* Chat feed */}
       {hasContent && (
-        <div className="flex-1 min-h-0 overflow-y-auto">
+        <div className="flex-1 min-h-0 overflow-y-auto pb-28">
           <NotesFeed notes={feed} onCopy={handleCopy} onEdit={handleEdit} />
+        </div>
+      )}
+
+      {!hasContent && welcomeMessage && (
+        <div className="mb-3 flex flex-col items-center text-center">
+          <Brain className="mb-1 h-6 w-6 text-gray-800 dark:text-gray-200" />
+          <span
+            className="text-sm font-medium md:text-base"
+            style={{
+              backgroundImage: "none",
+              WebkitBackgroundClip: "unset",
+              backgroundClip: "unset",
+              color: "rgba(2, 6, 24, 1)",
+            }}
+          >
+            {welcomeMessage}
+          </span>
         </div>
       )}
 
