@@ -138,6 +138,40 @@
   .scrollbar-hide::-webkit-scrollbar {
     display: none; /* Chrome, Safari and Opera */
   }
+
+  /* Chat-style textarea scrollbar: hidden until hover/focus */
+  .custom-scrollbar {
+    overflow-y: auto;
+    scrollbar-width: none; /* Firefox */
+  }
+
+  .custom-scrollbar::-webkit-scrollbar {
+    width: 0;
+    height: 0;
+  }
+
+  .custom-scrollbar:hover,
+  .custom-scrollbar:focus-visible {
+    scrollbar-width: thin; /* Firefox */
+  }
+
+  .custom-scrollbar:hover::-webkit-scrollbar,
+  .custom-scrollbar:focus-visible::-webkit-scrollbar {
+    width: 10px;
+  }
+
+  .custom-scrollbar:hover::-webkit-scrollbar-thumb,
+  .custom-scrollbar:focus-visible::-webkit-scrollbar-thumb {
+    background-color: color-mix(in oklab, var(--foreground) 35%, transparent);
+    border-radius: 999px;
+    border: 3px solid transparent;
+    background-clip: padding-box;
+  }
+
+  .custom-scrollbar:hover::-webkit-scrollbar-track,
+  .custom-scrollbar:focus-visible::-webkit-scrollbar-track {
+    background: transparent;
+  }
 }
 
 /* Typewriter animation - performant CSS-only */
