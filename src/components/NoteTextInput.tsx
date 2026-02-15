@@ -202,11 +202,21 @@ export default function NoteTextInput({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [startingNoteText, noteIdParam, noteId, guestNotes]);
 
-  // Auto-resize textarea
+  // Auto-resize textarea: grow to N lines, then scroll inside.
   useEffect(() => {
-    if (!textareaRef.current) return;
-    textareaRef.current.style.height = "40px";
-    textareaRef.current.style.height = `${textareaRef.current.scrollHeight}px`;
+    const textarea = textareaRef.current;
+    if (!textarea || typeof window === "undefined") return;
+    const styles = window.getComputedStyle(textarea);
+    const lineHeight = Number.parseFloat(styles.lineHeight) || 20;
+    const paddingTop = Number.parseFloat(styles.paddingTop) || 0;
+    const paddingBottom = Number.parseFloat(styles.paddingBottom) || 0;
+    const maxRows = 6;
+    const maxHeight = lineHeight * maxRows + paddingTop + paddingBottom;
+
+    textarea.style.height = "0px";
+    const nextHeight = Math.min(textarea.scrollHeight, maxHeight);
+    textarea.style.height = `${nextHeight}px`;
+    textarea.style.overflowY = textarea.scrollHeight > maxHeight ? "auto" : "hidden";
   }, [noteText]);
 
   // ---------- Helpers ----------
@@ -511,7 +521,7 @@ export default function NoteTextInput({
 
       {/* Composer (only visible when no note yet, or while editing) */}
       {showComposer && (
-        <div className="relative flex w-full items-end px-3.5 py-2.5">
+        <div className="sticky bottom-0 z-10 flex w-full items-end bg-background px-3.5 py-2.5">
           <div className="relative flex w-full max-w-4xl flex-col rounded-2xl border bg-white shadow dark:bg-gray-900">
             <div className="relative">
               <Textarea
@@ -520,12 +530,12 @@ export default function NoteTextInput({
                 onChange={handleUpdateNote}
                 onKeyDown={handleKeyDown}
                 placeholder=""
-                className="custom-scrollbar flex-1 resize-none rounded-2xl border-0 bg-transparent pl-4 pr-28 py-4 shadow-none focus:ring-0 focus:outline-none focus-visible:ring-0 focus-visible:outline-none"
+                className="custom-scrollbar field-sizing-fixed flex-1 resize-none rounded-2xl border-0 bg-transparent pl-4 pr-28 py-4 shadow-none focus:ring-0 focus:outline-none focus-visible:ring-0 focus-visible:outline-none"
                 rows={1}
-                style={{ overflowY: "auto", minHeight: 48, maxHeight: 220 }}
+                style={{ minHeight: 48 }}
               />
               {/* Buttons absolutely positioned on the right side */}
-              <div className="absolute right-2 top-1/2 -translate-y-1/2 flex items-center gap-1.5">
+              <div className="absolute bottom-2.5 right-2 flex items-center gap-1.5">
                 <MicrophoneButton onTranscript={handleSpeechTranscript} />
                 <AskAIButton user={user} noteText={noteText} />
                 <NewNoteButton

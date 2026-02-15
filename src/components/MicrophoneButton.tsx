@@ -2,44 +2,13 @@
 
 import React, { useState, useEffect, useRef } from "react";
 import { Button } from "./ui/button";
-import { Mic, X } from "lucide-react";
+import { Mic, X, Loader2 } from "lucide-react";
 import { cn } from "@/lib/utils";
-import FirefoxVoiceDialog from "./FirefoxVoiceDialog";
+import { toast } from "sonner";
 
 interface MicrophoneButtonProps {
   onTranscript: (text: string) => void;
   className?: string;
-}
-
-interface SpeechRecognitionEvent extends Event {
-  resultIndex: number;
-  results: SpeechRecognitionResultList;
-}
-
-interface SpeechRecognitionErrorEvent extends Event {
-  error: string;
-}
-
-interface SpeechRecognition extends EventTarget {
-  continuous: boolean;
-  interimResults: boolean;
-  lang: string;
-  start(): void;
-  stop(): void;
-  onresult: (event: SpeechRecognitionEvent) => void;
-  onerror: (event: SpeechRecognitionErrorEvent) => void;
-  onend: () => void;
-}
-
-declare global {
-  interface Window {
-    SpeechRecognition: {
-      new (): SpeechRecognition;
-    };
-    webkitSpeechRecognition: {
-      new (): SpeechRecognition;
-    };
-  }
 }
 
 const MicrophoneButton: React.FC<MicrophoneButtonProps> = ({
@@ -47,150 +16,213 @@ const MicrophoneButton: React.FC<MicrophoneButtonProps> = ({
   className,
 }) => {
   const [isListening, setIsListening] = useState(false);
+  const [isProcessing, setIsProcessing] = useState(false);
   const [isSupported, setIsSupported] = useState(false);
-  const [isFirefox, setIsFirefox] = useState(false);
-  const [showFirefoxDialog, setShowFirefoxDialog] = useState(false);
-  const recognitionRef = useRef<SpeechRecognition | null>(null);
+  const mediaRecorderRef = useRef<MediaRecorder | null>(null);
+  const audioChunksRef = useRef<Blob[]>([]);
+  const streamRef = useRef<MediaStream | null>(null);
 
   useEffect(() => {
-    // Detect Firefox
-    const userAgent = navigator.userAgent.toLowerCase();
-    const firefoxDetected = userAgent.includes("firefox");
-    setIsFirefox(firefoxDetected);
-
-    // Check for native Web Speech API support
-    if (
-      !firefoxDetected &&
-      typeof window !== "undefined" &&
-      ("SpeechRecognition" in window || "webkitSpeechRecognition" in window)
-    ) {
+    // Check if MediaRecorder is supported
+    if (typeof window !== "undefined" && navigator.mediaDevices?.getUserMedia) {
       setIsSupported(true);
-
-      const SpeechRecognition =
-        window.SpeechRecognition || window.webkitSpeechRecognition;
-      recognitionRef.current = new SpeechRecognition();
-
-      // Configure recognition
-      recognitionRef.current.continuous = true;
-      recognitionRef.current.interimResults = true;
-      recognitionRef.current.lang = "en-US";
-
-      recognitionRef.current.onresult = (event: SpeechRecognitionEvent) => {
-        let finalTranscript = "";
-
-        for (let i = event.resultIndex; i < event.results.length; i++) {
-          const transcript = event.results[i][0].transcript;
-          if (event.results[i].isFinal) {
-            finalTranscript += transcript + " ";
-          }
-        }
-
-        if (finalTranscript) {
-          onTranscript(finalTranscript.trim());
-        }
-      };
-
-      recognitionRef.current.onerror = (event: SpeechRecognitionErrorEvent) => {
-        console.error("Speech recognition error:", event.error);
-        setIsListening(false);
-
-        if (event.error === "not-allowed") {
-          alert(
-            "Microphone access denied. Please allow microphone access to use speech recognition.",
-          );
-        }
-      };
-
-      recognitionRef.current.onend = () => {
-        setIsListening(false);
-      };
     }
 
     return () => {
-      if (recognitionRef.current) {
-        try {
-          recognitionRef.current.stop();
-        } catch (e) {}
-      }
+      // Cleanup on unmount
+      stopRecording();
     };
-  }, [onTranscript]);
+  }, []);
 
-  const showInstructions = () => {
-    alert(
-      "🎤 Free Voice Input Options for Firefox:\n\n" +
-        "1️⃣ WINDOWS DICTATION (Recommended)\n" +
-        "   • Click in the text area\n" +
-        "   • Press Win + H\n" +
-        "   • Start speaking!\n\n" +
-        "2️⃣ FIREFOX EXTENSION\n" +
-        "   • Search 'Voice Fill' in Firefox Add-ons\n" +
-        "   • Install and use\n\n" +
-        "3️⃣ USE CHROME/EDGE\n" +
-        "   • Switch to Chrome or Edge\n" +
-        "   • Enjoy instant voice recognition\n\n" +
-        "We're working on native Firefox support! 🚀",
-    );
+  const stopRecording = () => {
+    if (mediaRecorderRef.current && mediaRecorderRef.current.state !== "inactive") {
+      mediaRecorderRef.current.stop();
+    }
+    if (streamRef.current) {
+      streamRef.current.getTracks().forEach((track) => track.stop());
+      streamRef.current = null;
+    }
+    setIsListening(false);
+  };
+
+  const startRecording = async () => {
+    try {
+      // Request microphone access
+      const stream = await navigator.mediaDevices.getUserMedia({
+        audio: {
+          echoCancellation: true,
+          noiseSuppression: true,
+          autoGainControl: true,
+        },
+      });
+
+      streamRef.current = stream;
+      audioChunksRef.current = [];
+
+      // Determine the best MIME type for the browser
+      let mimeType = "audio/webm";
+      if (!MediaRecorder.isTypeSupported(mimeType)) {
+        mimeType = "audio/webm;codecs=opus";
+        if (!MediaRecorder.isTypeSupported(mimeType)) {
+          mimeType = "audio/ogg;codecs=opus";
+          if (!MediaRecorder.isTypeSupported(mimeType)) {
+            mimeType = ""; // Let browser choose
+          }
+        }
+      }
+
+      const mediaRecorder = new MediaRecorder(stream, {
+        mimeType: mimeType || undefined,
+      });
+
+      mediaRecorderRef.current = mediaRecorder;
+
+      mediaRecorder.ondataavailable = (event) => {
+        if (event.data.size > 0) {
+          audioChunksRef.current.push(event.data);
+        }
+      };
+
+      mediaRecorder.onstop = async () => {
+        // Stop all tracks
+        if (streamRef.current) {
+          streamRef.current.getTracks().forEach((track) => track.stop());
+          streamRef.current = null;
+        }
+
+        // Process the audio
+        if (audioChunksRef.current.length > 0) {
+          await processAudio();
+        }
+      };
+
+      mediaRecorder.onerror = (event) => {
+        console.error("MediaRecorder error:", event);
+        toast.error("Recording error occurred");
+        stopRecording();
+      };
+
+      // Start recording
+      mediaRecorder.start();
+      setIsListening(true);
+    } catch (error) {
+      console.error("Error starting recording:", error);
+      if (error instanceof Error) {
+        if (error.name === "NotAllowedError" || error.name === "PermissionDeniedError") {
+          toast.error("Microphone access denied. Please allow microphone access.");
+        } else if (error.name === "NotFoundError" || error.name === "DevicesNotFoundError") {
+          toast.error("No microphone found. Please connect a microphone.");
+        } else {
+          toast.error("Failed to start recording: " + error.message);
+        }
+      } else {
+        toast.error("Failed to start recording");
+      }
+      setIsListening(false);
+    }
+  };
+
+  const processAudio = async () => {
+    setIsProcessing(true);
+    try {
+      // Combine audio chunks into a single blob
+      const audioBlob = new Blob(audioChunksRef.current, {
+        type: mediaRecorderRef.current?.mimeType || "audio/webm",
+      });
+
+      // Check if audio is too short (less than 0.5 seconds)
+      if (audioBlob.size < 1000) {
+        toast.error("Recording too short. Please try again.");
+        setIsProcessing(false);
+        return;
+      }
+
+      // Create FormData to send to API
+      const formData = new FormData();
+      formData.append("audio", audioBlob, "recording.webm");
+
+      // Send to API
+      const response = await fetch("/api/speech-to-text", {
+        method: "POST",
+        body: formData,
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.error || "Failed to transcribe audio");
+      }
+
+      const data = await response.json();
+
+      if (data.transcript && data.transcript.trim()) {
+        onTranscript(data.transcript.trim());
+        toast.success("Voice input transcribed successfully");
+      } else {
+        toast.error("No speech detected. Please try again.");
+      }
+    } catch (error) {
+      console.error("Error processing audio:", error);
+      if (error instanceof Error) {
+        toast.error("Transcription failed: " + error.message);
+      } else {
+        toast.error("Failed to transcribe audio");
+      }
+    } finally {
+      setIsProcessing(false);
+      audioChunksRef.current = [];
+    }
   };
 
   const toggleListening = () => {
-    if (isFirefox) {
-      setShowFirefoxDialog(true);
-      return;
-    }
-
     if (!isSupported) {
-      alert(
-        "Speech recognition is not supported in your browser. Please use Chrome, Edge, or Safari.",
+      toast.error(
+        "Voice recording is not supported in your browser. Please use a modern browser.",
       );
       return;
     }
 
-    if (isListening) {
-      recognitionRef.current?.stop();
-      setIsListening(false);
+    if (isListening || isProcessing) {
+      stopRecording();
     } else {
-      recognitionRef.current?.start();
-      setIsListening(true);
+      startRecording();
     }
   };
 
   return (
-    <>
-      <Button
-        type="button"
-        size="sm"
-        variant={isListening ? "default" : "ghost"}
-        onClick={toggleListening}
-        className={cn(
-          "relative h-8 w-8 rounded-full p-0 transition-all",
-          isListening &&
-            "bg-gray-900 text-white hover:bg-gray-800 dark:bg-gray-100 dark:text-gray-900 dark:hover:bg-gray-200",
-          className,
-        )}
-        title={isListening ? "Stop recording" : "Start voice input"}
-      >
-        {isListening ? (
-          <>
-            <X className="h-4 w-4" />
-            <span className="absolute -top-1 -right-1 flex h-3 w-3">
-              <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-gray-600 opacity-75 dark:bg-gray-400"></span>
-              <span className="relative inline-flex h-3 w-3 rounded-full bg-gray-700 dark:bg-gray-300"></span>
-            </span>
-          </>
-        ) : (
-          <Mic className="h-4 w-4" />
-        )}
-      </Button>
-
-      <FirefoxVoiceDialog
-        isOpen={showFirefoxDialog}
-        onClose={() => setShowFirefoxDialog(false)}
-        onShowInstructions={() => {
-          setShowFirefoxDialog(false);
-          showInstructions();
-        }}
-      />
-    </>
+    <Button
+      type="button"
+      size="sm"
+      variant={isListening || isProcessing ? "default" : "ghost"}
+      onClick={toggleListening}
+      disabled={isProcessing}
+      className={cn(
+        "relative h-8 w-8 rounded-full p-0 transition-all",
+        (isListening || isProcessing) &&
+          "bg-gray-900 text-white hover:bg-gray-800 dark:bg-gray-100 dark:text-gray-900 dark:hover:bg-gray-200",
+        className,
+      )}
+      title={
+        isProcessing
+          ? "Processing..."
+          : isListening
+            ? "Stop recording"
+            : "Start voice input"
+      }
+    >
+      {isProcessing ? (
+        <Loader2 className="h-4 w-4 animate-spin" />
+      ) : isListening ? (
+        <>
+          <X className="h-4 w-4" />
+          <span className="absolute -top-1 -right-1 flex h-3 w-3">
+            <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-gray-600 opacity-75 dark:bg-gray-400"></span>
+            <span className="relative inline-flex h-3 w-3 rounded-full bg-gray-700 dark:bg-gray-300"></span>
+          </span>
+        </>
+      ) : (
+        <Mic className="h-4 w-4" />
+      )}
+    </Button>
   );
 };
 

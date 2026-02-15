@@ -1,5 +1,7 @@
 "use server";
 
+import { NEUROSCIENCE_SYSTEM_PROMPT } from "@/lib/neuroscience-system-prompt";
+
 export async function generateNeuroscienceAnswer(
   questionText: string,
 ): Promise<{ answer: string | null; errorMessage: string | null }> {
@@ -18,28 +20,12 @@ export async function generateNeuroscienceAnswer(
     // Clean up the text
     const cleanText = truncatedText.trim().replace(/\n+/g, " ");
 
-    // Create the prompt focused on neuroplasticity and neuroscience
-    const prompt = `You are an expert neuroscience assistant specializing in neuroplasticity. You MUST provide answers that are grounded in neuroscience research and focus on brain function, neural mechanisms, and neuroplasticity principles.
-
-CRITICAL: Your answer MUST be based on neuroscience. Connect every response to brain function, neural pathways, neuroplasticity, or related neuroscience concepts. Even if the question seems general, frame your answer through a neuroscience lens.
-
-Rules:
-- ALWAYS provide answers from a neuroscience perspective - explain how the brain works, neural mechanisms, or neuroplasticity principles
-- Focus on neuroplasticity, brain adaptation, neural pathways, synaptic plasticity, brain regions, neurotransmitters, and related neuroscience concepts
-- Provide direct, factual answers based on neuroscience research and scientific evidence
-- Keep answers concise and to the point (2-4 sentences maximum, no fluff)
-- Connect general questions to neuroscience concepts when possible (e.g., learning → neuroplasticity, memory → hippocampus and neural pathways)
-- Do NOT provide medical advice, diagnoses, or treatment recommendations
-- Do NOT provide information about illegal activities, drugs, or harmful practices
-- If the question is not related to neuroscience/neuroplasticity, find a neuroscience angle or politely redirect to neuroscience topics
-- If asked about illegal or harmful topics, decline politely and suggest legitimate neuroscience learning instead
-- Use simple language but maintain scientific accuracy
-- Return ONLY the answer, no greetings, no disclaimers unless necessary
+    const prompt = `${NEUROSCIENCE_SYSTEM_PROMPT}
 
 User's question:
 ${cleanText}
 
-Answer (from a neuroscience perspective):`;
+Answer (follow the response structure):`;
 
     // Get configuration from environment
     const ollamaUrl = process.env.OLLAMA_API_URL;
@@ -65,7 +51,7 @@ Answer (from a neuroscience perspective):`;
         stream: false,
         options: {
           temperature: 0.4, // Lower temperature for more factual, focused responses
-          num_predict: 300, // Enough for a concise answer (2-4 sentences)
+          num_predict: 450, // Room for structured, readable sections
         },
       }),
     });
@@ -91,7 +77,7 @@ Answer (from a neuroscience perspective):`;
     // Clean up the answer
     let cleanAnswer = answerText
       .replace(/^["']|["']$/g, "") // Remove quotes
-      .replace(/\n+/g, " ") // Replace newlines with spaces
+      .replace(/\r\n/g, "\n")
       .trim();
 
     // Remove common prefixes that models might add
@@ -105,10 +91,12 @@ Answer (from a neuroscience perspective):`;
     ];
 
     for (const prefix of prefixesToRemove) {
-      if (cleanAnswer.toLowerCase().startsWith(prefix.toLowerCase())) {
-        cleanAnswer = cleanAnswer.substring(prefix.length).trim();
+      const regex = new RegExp(`^${prefix}\\b`, "i");
+      if (regex.test(cleanAnswer)) {
+        cleanAnswer = cleanAnswer.replace(regex, "").trim();
         // Remove any leading colon or dash
         cleanAnswer = cleanAnswer.replace(/^[:-\s]+/, "").trim();
+        break;
       }
     }
 
