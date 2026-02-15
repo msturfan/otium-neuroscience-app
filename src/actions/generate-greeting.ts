@@ -63,7 +63,6 @@ Important:
 - If the note contains multiple bullet points/ideas, pick a meaningful one (preferably not the very first item when possible).
 - Do not invent details that are not in the note.
 - Keep the response concise and friendly.
-- Use the same language as the user's note if possible.
 - Return only the greeting message, nothing else.`;
 
     // Call Ollama API

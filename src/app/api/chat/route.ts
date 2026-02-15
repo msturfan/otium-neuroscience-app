@@ -1,11 +1,12 @@
 import { NextRequest } from "next/server";
 import { NEUROSCIENCE_SYSTEM_PROMPT } from "@/lib/neuroscience-system-prompt";
+import { OTIUM_SYSTEM_PROMPT } from "@/lib/otium-system-prompt";
 
 export const runtime = "nodejs";
 
 export async function POST(req: NextRequest) {
   try {
-    const { messages, model } = await req.json();
+    const { messages, model, promptType } = await req.json();
 
     const ollamaUrl = process.env.OLLAMA_API_URL;
     const ollamaModel =
@@ -18,9 +19,12 @@ export async function POST(req: NextRequest) {
       );
     }
 
+    // Use appropriate system prompt based on promptType (default to neuroscience for backward compatibility)
+    const systemPrompt = promptType === "otium" ? OTIUM_SYSTEM_PROMPT : NEUROSCIENCE_SYSTEM_PROMPT;
+
     // Prepend the system prompt server-side so it never reaches the client bundle
     const fullMessages = [
-      { role: "system", content: NEUROSCIENCE_SYSTEM_PROMPT },
+      { role: "system", content: systemPrompt },
       ...messages,
     ];
 

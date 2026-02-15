@@ -84,6 +84,11 @@ export default function NoteTextInput({
   const activeGreetingRequestIdRef = useRef<string | null>(null);
   const activeLoadingBubbleIdRef = useRef<string | null>(null);
 
+  // Streaming state for follow-up messages
+  const [isStreaming, setIsStreaming] = useState(false);
+  const abortControllerRef = useRef<AbortController | null>(null);
+  const streamingMessageIdRef = useRef<string | null>(null);
+
   // Feed scoped to this noteId only - combine user notes and AI greetings
   const userNotes: NoteLike[] = user
     ? feedNotes
@@ -96,28 +101,29 @@ export default function NoteTextInput({
   }, [userNotes]);
 
   // Save local conversation messages to sessionStorage whenever they change.
+  // Save all messages (user + AI) to prevent losing follow-up conversations.
   // Only save for the current note to prevent cross-contamination.
   useEffect(() => {
     if (
       typeof window !== "undefined" &&
-      hasUserNoteContent &&
       aiGreetings.length > 0 &&
       currentNoteId === noteId
     ) {
       try {
         // Persist completed messages only (exclude loading placeholders).
-        const greetingsToSave = aiGreetings.filter(
-          (g) => !g.isLoading && g.text,
+        // Include both user messages and AI responses.
+        const messagesToSave = aiGreetings.filter(
+          (m) => !m.isLoading && m.text,
         );
-        if (greetingsToSave.length > 0) {
-          const serialized = JSON.stringify(greetingsToSave);
+        if (messagesToSave.length > 0) {
+          const serialized = JSON.stringify(messagesToSave);
           sessionStorage.setItem(`ai-greetings-${noteId}`, serialized);
         }
       } catch (error) {
         console.error("Failed to save AI greetings to sessionStorage:", error);
       }
     }
-  }, [aiGreetings, noteId, hasUserNoteContent, currentNoteId]);
+  }, [aiGreetings, noteId, currentNoteId]);
 
   // Handle noteId changes and load appropriate greetings
   useEffect(() => {
@@ -132,13 +138,20 @@ export default function NoteTextInput({
       activeGreetingRequestIdRef.current = null;
       activeLoadingBubbleIdRef.current = null;
 
-      // Load greetings for the new note if it has content
-      if (typeof window !== "undefined" && hasUserNoteContent) {
+      // Stop any ongoing stream
+      if (abortControllerRef.current) {
+        abortControllerRef.current.abort();
+        abortControllerRef.current = null;
+      }
+      setIsStreaming(false);
+      streamingMessageIdRef.current = null;
+
+      // Load messages for the new note from sessionStorage
+      if (typeof window !== "undefined") {
         try {
           const stored = sessionStorage.getItem(`ai-greetings-${noteId}`);
           if (stored) {
             const parsed = JSON.parse(stored);
-            // Only load if we have content and greetings exist
             if (parsed.length > 0) {
               setAiGreetings(parsed);
             }
@@ -151,33 +164,21 @@ export default function NoteTextInput({
         }
       }
     } else if (typeof window !== "undefined") {
-      // Same note, but check if content status changed
-      if (hasUserNoteContent) {
-        // Only load greetings if not already loaded
-        if (aiGreetings.length === 0) {
-          try {
-            const stored = sessionStorage.getItem(`ai-greetings-${noteId}`);
-            if (stored) {
-              const parsed = JSON.parse(stored);
-              if (parsed.length > 0) {
-                setAiGreetings(parsed);
-              }
-            }
-          } catch (error) {
-            console.error(
-              "Failed to reload AI greetings from sessionStorage:",
-              error,
-            );
-          }
-        }
-      } else {
-        // Clear greetings if there's no user note content (note was deleted/cleared)
-        setAiGreetings([]);
-        // Also clear from sessionStorage for this noteId
+      // Same note - load messages if not already loaded
+      if (aiGreetings.length === 0) {
         try {
-          sessionStorage.removeItem(`ai-greetings-${noteId}`);
+          const stored = sessionStorage.getItem(`ai-greetings-${noteId}`);
+          if (stored) {
+            const parsed = JSON.parse(stored);
+            if (parsed.length > 0) {
+              setAiGreetings(parsed);
+            }
+          }
         } catch (error) {
-          // Ignore errors when clearing
+          console.error(
+            "Failed to reload AI greetings from sessionStorage:",
+            error,
+          );
         }
       }
     }
@@ -355,6 +356,7 @@ export default function NoteTextInput({
   };
 
   const handleStopGenerating = () => {
+    // Stop greeting generation
     activeGreetingRequestIdRef.current = null;
     setIsGeneratingGreeting(false);
     const loadingId = activeLoadingBubbleIdRef.current;
@@ -362,6 +364,131 @@ export default function NoteTextInput({
       setAiGreetings((prev) => prev.filter((n) => n.id !== loadingId));
     }
     activeLoadingBubbleIdRef.current = null;
+
+    // Stop streaming
+    if (abortControllerRef.current) {
+      abortControllerRef.current.abort();
+    }
+  };
+
+  // ---------- Streaming AI response for follow-up messages ----------
+  const streamAIResponse = async (userMessage: string) => {
+    const aiMessageId = `ai-stream-${Date.now()}`;
+    streamingMessageIdRef.current = aiMessageId;
+
+    // Add loading bubble
+    setAiGreetings((prev) => [
+      ...prev,
+      {
+        id: aiMessageId,
+        text: "",
+        createdAt: new Date(),
+        isAI: true,
+        isLoading: true,
+      },
+    ]);
+
+    // Build conversation history for context
+    const conversationHistory = aiGreetings
+      .filter((m) => m.text?.trim() && !m.isLoading)
+      .map((m) => ({
+        role: m.isAI ? ("assistant" as const) : ("user" as const),
+        content: m.text,
+      }));
+
+    // Also include the first user note if it exists
+    if (hasUserNoteContent && userNotes[0]?.text?.trim()) {
+      conversationHistory.unshift({
+        role: "user" as const,
+        content: userNotes[0].text,
+      });
+    }
+
+    const messages = [
+      ...conversationHistory,
+      { role: "user" as const, content: userMessage },
+    ];
+
+    const controller = new AbortController();
+    abortControllerRef.current = controller;
+    setIsStreaming(true);
+
+    try {
+      const response = await fetch("/api/chat", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ messages, promptType: "otium" }),
+        signal: controller.signal,
+      });
+
+      if (!response.ok || !response.body) {
+        throw new Error("Failed to get streaming response");
+      }
+
+      const reader = response.body.getReader();
+      const decoder = new TextDecoder();
+      let accumulated = "";
+
+      // Replace loading with empty streaming bubble
+      setAiGreetings((prev) =>
+        prev.map((m) =>
+          m.id === aiMessageId ? { ...m, isLoading: false, text: "" } : m,
+        ),
+      );
+
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+
+        const text = decoder.decode(value, { stream: true });
+        accumulated += text;
+
+        // Update the AI message with accumulated text
+        setAiGreetings((prev) =>
+          prev.map((m) =>
+            m.id === aiMessageId ? { ...m, text: accumulated } : m,
+          ),
+        );
+      }
+
+      // Final update
+      if (accumulated.trim()) {
+        setAiGreetings((prev) =>
+          prev.map((m) =>
+            m.id === aiMessageId
+              ? { ...m, text: accumulated.trim(), isLoading: false }
+              : m,
+          ),
+        );
+      } else {
+        // If no text was received, remove the bubble
+        setAiGreetings((prev) => prev.filter((m) => m.id !== aiMessageId));
+      }
+    } catch (error: unknown) {
+      if (error instanceof Error && error.name === "AbortError") {
+        // User stopped the stream — keep whatever was accumulated
+        setAiGreetings((prev) =>
+          prev.map((m) =>
+            m.id === aiMessageId ? { ...m, isLoading: false } : m,
+          ),
+        );
+      } else {
+        console.error("Streaming error:", error);
+        // Remove loading bubble on error
+        setAiGreetings((prev) => prev.filter((m) => m.id !== aiMessageId));
+      }
+    } finally {
+      setIsStreaming(false);
+      abortControllerRef.current = null;
+      streamingMessageIdRef.current = null;
+
+      // Focus textarea for follow-up
+      setTimeout(() => {
+        if (textareaRef.current) {
+          textareaRef.current.focus();
+        }
+      }, 100);
+    }
   };
 
   // ---------- Send ----------
@@ -387,6 +514,9 @@ export default function NoteTextInput({
         },
       ]);
     }
+
+    // Clear text immediately
+    setNoteText("");
 
     if (isEditing) {
       const res = await flushSaveNow(textToSave);
@@ -436,12 +566,15 @@ export default function NoteTextInput({
         }
       }
 
-      // Generate Otium AI response for every sent message.
-      shouldGenerateGreeting = true;
+      // For first message: use greeting generation (non-streaming)
+      // For follow-up messages: use streaming chat (typewriter effect)
+      if (isFirstMessage) {
+        shouldGenerateGreeting = true;
+      } else {
+        // Use streaming for follow-up messages to get typewriter effect
+        await streamAIResponse(textToSave);
+      }
     }
-
-    // Clear composer after send
-    setNoteText("");
 
     const shell = document.getElementById("shell");
     shell?.classList.remove("justify-center");
@@ -452,10 +585,9 @@ export default function NoteTextInput({
       router.refresh();
     }
 
-    // Keep focus behavior the same
+    // Reset textarea height
     if (textareaRef.current) {
       textareaRef.current.style.height = "40px";
-      textareaRef.current.focus();
     }
 
     if (shouldGenerateGreeting) {
@@ -540,14 +672,14 @@ export default function NoteTextInput({
               onChange={handleUpdateNote}
               onKeyDown={handleKeyDown}
               placeholder=""
-              disabled={isGeneratingGreeting}
+              disabled={isGeneratingGreeting || isStreaming}
               className="custom-scrollbar field-sizing-fixed flex-1 resize-none rounded-2xl border-0 bg-transparent pl-4 pr-28 py-4 shadow-none focus:ring-0 focus:outline-none focus-visible:ring-0 focus-visible:outline-none"
               rows={1}
               style={{ minHeight: 48 }}
             />
             {/* Buttons absolutely positioned on the right side */}
             <div className="absolute bottom-2.5 right-2 flex items-center gap-1.5">
-              {isGeneratingGreeting ? (
+              {isGeneratingGreeting || isStreaming ? (
                 <Tooltip>
                   <TooltipTrigger asChild>
                     <Button
@@ -599,7 +731,7 @@ export default function NoteTextInput({
               </div>
             )}
             {/* Follow-up placeholder */}
-            {!noteText && !isEditing && hasContent && !isGeneratingGreeting && (
+            {!noteText && !isEditing && hasContent && !isGeneratingGreeting && !isStreaming && (
               <div className="pointer-events-none absolute inset-0 flex items-start pl-4 pr-28 pt-4">
                 <span className="text-muted-foreground text-base md:text-sm">
                   Ask a follow-up question...
