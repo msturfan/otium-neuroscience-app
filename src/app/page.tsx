@@ -1,6 +1,5 @@
 import { redirect } from "next/navigation";
 import { randomUUID } from "crypto";
-import Image from "next/image";
 import { prisma } from "@/db/prisma";
 import { getUser } from "@/auth/server";
 import HomeToaster from "@/components/HomeToaster";
@@ -51,29 +50,19 @@ export default async function HomePage({ searchParams }: Props) {
   return (
     <div
       id="shell"
-      className={`flex h-full flex-col items-center ${
+      className={`flex h-full min-h-0 flex-col items-center ${
         hasContentServer ? "justify-start" : "justify-center"
       } gap-4 px-4`}
     >
-      {!hasContentServer && (
-        <div className="flex flex-col items-center mb-2">
-          <Image
-            src="/otium_gray.ico"
-            alt="Otium Logo"
-            width={150}
-            height={150}
-            className="mx-auto opacity-30"
-          />
-        </div>
-      )}
-      <div className="relative w-full max-w-4xl">
-        <div className="flex justify-center">
+      <div className="relative w-full max-w-4xl flex-1 min-h-0">
+        <div className="flex h-full min-h-0 justify-center">
           <NoteTextInput
             noteId={noteId}
             startingNoteText={note?.text || ""}
             user={user}
             feedNotes={feedNotes}
             greeting={greeting}
+            showOtiumLogo
           />
         </div>
         <HomeToaster />
