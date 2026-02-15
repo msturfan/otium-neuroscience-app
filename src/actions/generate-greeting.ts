@@ -46,19 +46,25 @@ export async function generateNoteGreeting(
       timeDescription = `It's ${hour}:00 at night`;
     }
 
-    // Truncate note text for context (first 100 characters)
-    const notePreview = noteText.trim().slice(0, 100);
+    // Send full note context so the model can consider all user content.
+    const normalizedNote = noteText.replace(/\s+/g, " ").trim();
+    const noteContext = normalizedNote;
 
     // Create a prompt for a friendly, personalized greeting
-    const prompt = `Generate a warm, friendly confirmation message (3-4 sentences, 40-60 words) that:
+    const prompt = `Generate a warm, friendly confirmation message that:
 1. Confirms the note was saved successfully
 2. Includes a personalized greeting appropriate for ${timeGreeting} (${timeDescription})
-3. Acknowledges the user's note content briefly
+3. Acknowledges 1-2 specific ideas from the user's note (not only the first sentence)
 4. Is warm, natural, and encouraging
 
-User's note preview: "${notePreview}"
+User's note content: "${noteContext}"
 
-Make it feel personal and conversational. Use the same language as the user's note if possible. Return only the greeting message, nothing else.`;
+Important:
+- If the note contains multiple bullet points/ideas, pick a meaningful one (preferably not the very first item when possible).
+- Do not invent details that are not in the note.
+- Keep the response concise and friendly.
+- Use the same language as the user's note if possible.
+- Return only the greeting message, nothing else.`;
 
     // Call Ollama API
     console.log("Calling Ollama API:", `${ollamaUrl}/api/generate`);
@@ -73,7 +79,6 @@ Make it feel personal and conversational. Use the same language as the user's no
         stream: false,
         options: {
           temperature: 0.8, // Higher for more natural, varied greetings
-          num_predict: 80, // Allow longer, more detailed responses
         },
       }),
     });
@@ -107,16 +112,11 @@ Make it feel personal and conversational. Use the same language as the user's no
     console.log("Raw greeting from Ollama:", greeting);
 
     // Clean up the greeting - remove quotes, extra whitespace, etc.
-    let cleanGreeting = greeting
+    const cleanGreeting = greeting
       .replace(/^["']|["']$/g, "") // Remove quotes
       .replace(/\n+/g, " ") // Replace newlines with spaces
       .replace(/\s+/g, " ") // Normalize whitespace
       .trim();
-
-    // Limit length but allow longer greetings (max 300 characters)
-    if (cleanGreeting.length > 300) {
-      cleanGreeting = cleanGreeting.substring(0, 297) + "...";
-    }
 
     return cleanGreeting || null;
   } catch (error) {
