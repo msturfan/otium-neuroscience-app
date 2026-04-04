@@ -17,13 +17,14 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Button } from "./ui/button";
-import { Archive, Loader2, MoreVertical, Trash2 } from "lucide-react";
+import { Archive, Loader2, MoreVertical, Pin, Trash2 } from "lucide-react";
 import { useState, useTransition } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { toast } from "sonner";
 import { deleteNoteAction } from "@/actions/notes";
 import { deleteNeuroscienceAction } from "@/actions/neuroscience";
 import React from "react";
+import { usePinnedChats } from "@/hooks/usePinnedChats";
 
 type Props = {
   noteId: string;
@@ -47,7 +48,19 @@ function NoteActions({
 
   const deleteRef = React.useRef<HTMLButtonElement>(null);
   const cancelRef = React.useRef<HTMLButtonElement>(null);
-  
+
+  const { togglePin, isPinned } = usePinnedChats(isNeuroscience);
+
+  const handleTogglePin = () => {
+    const wasPinned = isPinned(noteId);
+    togglePin(noteId);
+    toast(wasPinned ? "Chat unpinned" : "Chat pinned", {
+      description: wasPinned
+        ? "Removed from pinned in the sidebar."
+        : "Shown at the top of your sidebar list.",
+    });
+  };
+
   const deleteAction = isNeuroscience ? deleteNeuroscienceAction : deleteNoteAction;
   const redirectPath = isNeuroscience ? "/neuroplasticity" : "/";
 
@@ -122,7 +135,14 @@ function NoteActions({
             <MoreVertical className="h-4 w-4" />
           </Button>
         </DropdownMenuTrigger>
-        <DropdownMenuContent align="end" className="w-40">
+        <DropdownMenuContent align="end" className="w-44">
+          <DropdownMenuItem
+            onClick={handleTogglePin}
+            className="cursor-pointer"
+          >
+            <Pin className="mr-2 h-4 w-4" />
+            {isPinned(noteId) ? "Unpin chat" : "Pin chat"}
+          </DropdownMenuItem>
           <DropdownMenuItem
             onClick={handleArchiveNote}
             className="cursor-pointer"

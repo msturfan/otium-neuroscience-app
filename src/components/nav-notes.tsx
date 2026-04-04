@@ -1,8 +1,8 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useRouter, useSearchParams, usePathname } from "next/navigation";
-import { ChevronRight, Copy, Loader2 } from "lucide-react";
+import { ChevronRight, Copy, Loader2, Pin } from "lucide-react";
 import { toast } from "sonner";
 import Image from "next/image";
 import {
@@ -30,6 +30,7 @@ import { Badge } from "@/components/ui/badge";
 import useNote from "@/hooks/useNote";
 import NoteActions from "./NoteActions";
 import { User } from "@supabase/supabase-js";
+import { usePinnedChats } from "@/hooks/usePinnedChats";
 
 type UserNote = {
   id: string;
@@ -41,12 +42,13 @@ type UserNote = {
 
 type Props = {
   user: User | null;
+  onKnownNoteIdsChange?: (ids: Set<string> | null) => void;
 };
 
 const SIDEBAR_NOTES_EXPANDED_KEY = "otium.sidebar.myNotesExpanded";
 const SIDEBAR_NEUROSCIENCE_EXPANDED_KEY = "otium.sidebar.neuroscienceExpanded";
 
-export function NavNotes({ user }: Props) {
+export function NavNotes({ user, onKnownNoteIdsChange }: Props) {
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
@@ -144,6 +146,26 @@ export function NavNotes({ user }: Props) {
   const displayNotes = user ? userNotes : guestNotes;
   const isGuest = !user;
 
+  const { pinnedIds } = usePinnedChats(isNeuroplasticity);
+
+  useEffect(() => {
+    if (!onKnownNoteIdsChange) return;
+    if (loading) {
+      onKnownNoteIdsChange(null);
+      return;
+    }
+    onKnownNoteIdsChange(new Set(displayNotes.map((n) => n.id)));
+  }, [loading, displayNotes, onKnownNoteIdsChange]);
+
+  const orderedNotes = useMemo(() => {
+    const pinSet = new Set(pinnedIds);
+    const pinnedOrdered = pinnedIds
+      .map((id) => displayNotes.find((n) => n.id === id))
+      .filter((n): n is (typeof displayNotes)[number] => Boolean(n));
+    const unpinned = displayNotes.filter((n) => !pinSet.has(n.id));
+    return [...pinnedOrdered, ...unpinned];
+  }, [displayNotes, pinnedIds]);
+
   const sectionTitle = isNeuroplasticity ? "Neuroscience" : "My Notes";
   const toggleAriaLabel = sectionOpen
     ? `Hide ${sectionTitle}`
@@ -184,7 +206,7 @@ export function NavNotes({ user }: Props) {
             <div className="flex items-center justify-center py-8">
               <Loader2 className="text-muted-foreground h-6 w-6 animate-spin" />
             </div>
-          ) : displayNotes.length === 0 ? (
+          ) : orderedNotes.length === 0 ? (
             <div className="px-3 py-8 text-center">
               <Image
                 src="/otium_gray.png"
@@ -201,16 +223,28 @@ export function NavNotes({ user }: Props) {
             </div>
           ) : (
             <SidebarMenu>
-              {displayNotes.map((note) => (
+              {orderedNotes.map((note) => {
+                const isPinned = pinnedIds.includes(note.id);
+                return (
                 <SidebarMenuItem key={note.id} className="group/item relative">
                   <SidebarMenuButton
                     isActive={currentNoteId === note.id}
                     onClick={() => handleNoteClick(note.id)}
-                    className="pr-10"
+                    className={cn(
+                      "pr-10",
+                      // Pinned rows: only show the pin icon; do not use accent fill (reads as “selected”).
+                      isPinned && "justify-between gap-2",
+                    )}
                   >
-                    <span className="truncate text-sm font-medium">
+                    <span className="min-w-0 flex-1 truncate text-sm font-medium">
                       {getNoteTitle(note)}
                     </span>
+                    {isPinned ? (
+                      <Pin
+                        className="text-muted-foreground h-3.5 w-3.5 shrink-0"
+                        aria-hidden
+                      />
+                    ) : null}
                   </SidebarMenuButton>
 
                   {user ? (
@@ -248,11 +282,12 @@ export function NavNotes({ user }: Props) {
                     />
                   )}
                 </SidebarMenuItem>
-              ))}
+                );
+              })}
             </SidebarMenu>
           )}
 
-          {!loading && isGuest && displayNotes.length > 0 && (
+          {!loading && isGuest && orderedNotes.length > 0 && (
             <div className="mt-4 px-3">
               <p className="text-muted-foreground text-xs">
                 <Button

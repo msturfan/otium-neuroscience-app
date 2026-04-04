@@ -136,17 +136,21 @@ export function AppSidebar({
         (item) => item.title !== "Calendar" && item.title !== "Settings"
       );
 
+  const [knownNoteIds, setKnownNoteIds] = React.useState<Set<string> | null>(
+    null,
+  );
+
   return (
     <Sidebar className="border-r-0" {...props}>
       <SidebarHeader>
         <TeamSwitcher teams={data.teams} user={user} />
         <div className="flex flex-col gap-2">
           <SearchCommand />
-          <NavMain items={data.navMain} />
+          <NavMain items={data.navMain} knownNoteIds={knownNoteIds} />
         </div>
       </SidebarHeader>
       <SidebarContent>
-        <NavNotes user={user} />
+        <NavNotes user={user} onKnownNoteIdsChange={setKnownNoteIds} />
         <NavSecondary items={navSecondaryFiltered} className="mt-auto" />
       </SidebarContent>
       <SidebarFooter>
