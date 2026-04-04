@@ -509,14 +509,13 @@ export default function NeuroscienceTextInput({
 
       {!hasContent && welcomeMessage && (
         <div className="mb-3 flex flex-col items-center text-center">
-          <Brain className="mb-1 h-6 w-6 text-gray-800 dark:text-gray-200" />
+          <Brain className="mb-1 h-6 w-6 text-foreground" />
           <span
-            className="text-sm font-medium md:text-base"
+            className="text-sm font-medium text-foreground md:text-base"
             style={{
               backgroundImage: "none",
               WebkitBackgroundClip: "unset",
               backgroundClip: "unset",
-              color: "rgba(2, 6, 24, 1)",
             }}
           >
             {welcomeMessage}
