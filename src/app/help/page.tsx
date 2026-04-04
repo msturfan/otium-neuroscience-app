@@ -24,10 +24,10 @@ export default function HelpPage() {
         </h1>
         <div className="text-muted-foreground space-y-1 text-sm">
           <p>
-            <strong>Last updated:</strong> December 2025
+            <strong>Last updated:</strong> April 2026
           </p>
           <p>
-            <strong>Created in:</strong> Denver, CO & San Francisco, CA
+            <strong>Created in:</strong> Albuquerque, NM & Denver, CO & San Francisco, CA
           </p>
         </div>
       </div>

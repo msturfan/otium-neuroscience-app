@@ -1,7 +1,14 @@
 "use client";
 
 import { useSearchParams, useRouter } from "next/navigation";
-import { ChangeEvent, useCallback, useEffect, useMemo, useRef, useState } from "react";
+import {
+  ChangeEvent,
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 import { toast } from "sonner";
 import { User } from "@supabase/supabase-js";
 import { Brain, Square } from "lucide-react";
@@ -13,7 +20,7 @@ import NotesFeed, { NoteLike } from "./NotesFeed";
 import useNote from "@/hooks/useNote";
 import { GuestNote } from "@/providers/NoteProvider";
 import { updateNeuroscienceAction, createNeuroscienceAction } from "@/actions/neuroscience";
-import { generateNoteTitle } from "@/actions/generate-title";
+//import { generateNoteTitle } from "@/actions/generate-title";
 import MicrophoneButton from "./MicrophoneButton";
 import { Button } from "./ui/button";
 import {
@@ -209,14 +216,15 @@ export default function NeuroscienceTextInput({
     textarea.style.height = "0px";
     const nextHeight = Math.min(textarea.scrollHeight, maxHeight);
     textarea.style.height = `${nextHeight}px`;
-    textarea.style.overflowY = textarea.scrollHeight > maxHeight ? "auto" : "hidden";
+    textarea.style.overflowY =
+      textarea.scrollHeight > maxHeight ? "auto" : "hidden";
   }, [noteText]);
 
   const upsertGuestNote = async (text: string) => {
     const existing = guestNotes.find((n) => n.id === noteId);
-    let title: string | null = null;
+    const title: string | null = null;
     if (text.trim().length > 20) {
-      title = await generateNoteTitle(text);
+      //title = await generateNoteTitle(text);
     }
     if (existing) {
       updateGuestNote(noteId, text, title);
@@ -234,126 +242,129 @@ export default function NeuroscienceTextInput({
   };
 
   // ---------- Streaming AI response ----------
-  const streamAIResponse = useCallback(async (userMessage: string) => {
-    const aiMessageId = `ai-stream-${Date.now()}`;
-    streamingMessageIdRef.current = aiMessageId;
+  const streamAIResponse = useCallback(
+    async (userMessage: string) => {
+      const aiMessageId = `ai-stream-${Date.now()}`;
+      streamingMessageIdRef.current = aiMessageId;
 
-    // Add loading bubble
-    setChatMessages((prev) => [
-      ...prev,
-      {
-        id: aiMessageId,
-        text: "",
-        createdAt: new Date(),
-        isAI: true,
-        isLoading: true,
-      },
-    ]);
+      // Add loading bubble
+      setChatMessages((prev) => [
+        ...prev,
+        {
+          id: aiMessageId,
+          text: "",
+          createdAt: new Date(),
+          isAI: true,
+          isLoading: true,
+        },
+      ]);
 
-    // Build conversation history for context
-    const conversationHistory = chatMessages
-      .filter((m) => m.text?.trim() && !m.isLoading)
-      .map((m) => ({
-        role: m.isAI ? "assistant" as const : "user" as const,
-        content: m.text,
-      }));
+      // Build conversation history for context
+      const conversationHistory = chatMessages
+        .filter((m) => m.text?.trim() && !m.isLoading)
+        .map((m) => ({
+          role: m.isAI ? ("assistant" as const) : ("user" as const),
+          content: m.text,
+        }));
 
-    // Also include the first user note if it exists
-    if (hasUserNoteContent && userNotes[0]?.text?.trim()) {
-      conversationHistory.unshift({
-        role: "user" as const,
-        content: userNotes[0].text,
-      });
-    }
-
-    // System prompt is injected server-side in the API route
-    const messages = [
-      ...conversationHistory,
-      { role: "user" as const, content: userMessage },
-    ];
-
-    const controller = new AbortController();
-    abortControllerRef.current = controller;
-    setIsStreaming(true);
-
-    try {
-      const response = await fetch("/api/chat", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ messages }),
-        signal: controller.signal,
-      });
-
-      if (!response.ok || !response.body) {
-        throw new Error("Failed to get streaming response");
+      // Also include the first user note if it exists
+      if (hasUserNoteContent && userNotes[0]?.text?.trim()) {
+        conversationHistory.unshift({
+          role: "user" as const,
+          content: userNotes[0].text,
+        });
       }
 
-      const reader = response.body.getReader();
-      const decoder = new TextDecoder();
-      let accumulated = "";
+      // System prompt is injected server-side in the API route
+      const messages = [
+        ...conversationHistory,
+        { role: "user" as const, content: userMessage },
+      ];
 
-      // Replace loading with empty streaming bubble
-      setChatMessages((prev) =>
-        prev.map((m) =>
-          m.id === aiMessageId ? { ...m, isLoading: false, text: "" } : m,
-        ),
-      );
+      const controller = new AbortController();
+      abortControllerRef.current = controller;
+      setIsStreaming(true);
 
-      while (true) {
-        const { done, value } = await reader.read();
-        if (done) break;
+      try {
+        const response = await fetch("/api/chat", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ messages }),
+          signal: controller.signal,
+        });
 
-        const text = decoder.decode(value, { stream: true });
-        accumulated += text;
-
-        // Update the AI message with accumulated text
-        setChatMessages((prev) =>
-          prev.map((m) =>
-            m.id === aiMessageId ? { ...m, text: accumulated } : m,
-          ),
-        );
-      }
-
-      // Final update
-      if (accumulated.trim()) {
-        setChatMessages((prev) =>
-          prev.map((m) =>
-            m.id === aiMessageId
-              ? { ...m, text: accumulated.trim(), isLoading: false }
-              : m,
-          ),
-        );
-      } else {
-        // If no text was received, remove the bubble
-        setChatMessages((prev) => prev.filter((m) => m.id !== aiMessageId));
-      }
-    } catch (error: unknown) {
-      if (error instanceof Error && error.name === "AbortError") {
-        // User stopped the stream — keep whatever was accumulated
-        setChatMessages((prev) =>
-          prev.map((m) =>
-            m.id === aiMessageId ? { ...m, isLoading: false } : m,
-          ),
-        );
-      } else {
-        console.error("Streaming error:", error);
-        // Remove loading bubble and fall back to non-streaming
-        setChatMessages((prev) => prev.filter((m) => m.id !== aiMessageId));
-        await fallbackNonStreaming();
-      }
-    } finally {
-      setIsStreaming(false);
-      abortControllerRef.current = null;
-      streamingMessageIdRef.current = null;
-
-      // Focus textarea for follow-up
-      setTimeout(() => {
-        if (textareaRef.current) {
-          textareaRef.current.focus();
+        if (!response.ok || !response.body) {
+          throw new Error("Failed to get streaming response");
         }
-      }, 100);
-    }
-  }, [chatMessages, hasUserNoteContent, userNotes]);
+
+        const reader = response.body.getReader();
+        const decoder = new TextDecoder();
+        let accumulated = "";
+
+        // Replace loading with empty streaming bubble
+        setChatMessages((prev) =>
+          prev.map((m) =>
+            m.id === aiMessageId ? { ...m, isLoading: false, text: "" } : m,
+          ),
+        );
+
+        while (true) {
+          const { done, value } = await reader.read();
+          if (done) break;
+
+          const text = decoder.decode(value, { stream: true });
+          accumulated += text;
+
+          // Update the AI message with accumulated text
+          setChatMessages((prev) =>
+            prev.map((m) =>
+              m.id === aiMessageId ? { ...m, text: accumulated } : m,
+            ),
+          );
+        }
+
+        // Final update
+        if (accumulated.trim()) {
+          setChatMessages((prev) =>
+            prev.map((m) =>
+              m.id === aiMessageId
+                ? { ...m, text: accumulated.trim(), isLoading: false }
+                : m,
+            ),
+          );
+        } else {
+          // If no text was received, remove the bubble
+          setChatMessages((prev) => prev.filter((m) => m.id !== aiMessageId));
+        }
+      } catch (error: unknown) {
+        if (error instanceof Error && error.name === "AbortError") {
+          // User stopped the stream — keep whatever was accumulated
+          setChatMessages((prev) =>
+            prev.map((m) =>
+              m.id === aiMessageId ? { ...m, isLoading: false } : m,
+            ),
+          );
+        } else {
+          console.error("Streaming error:", error);
+          // Remove loading bubble and fall back to non-streaming
+          setChatMessages((prev) => prev.filter((m) => m.id !== aiMessageId));
+          await fallbackNonStreaming();
+        }
+      } finally {
+        setIsStreaming(false);
+        abortControllerRef.current = null;
+        streamingMessageIdRef.current = null;
+
+        // Focus textarea for follow-up
+        setTimeout(() => {
+          if (textareaRef.current) {
+            textareaRef.current.focus();
+          }
+        }, 100);
+      }
+    },
+    [chatMessages, hasUserNoteContent, userNotes],
+  );
 
   // Fallback to a short, neuroscience-focused error message
   const fallbackNonStreaming = async () => {
@@ -485,13 +496,13 @@ export default function NeuroscienceTextInput({
 
   return (
     <div
-      className={`relative mx-auto flex h-full w-full max-w-3xl flex-1 min-h-0 flex-col ${
+      className={`relative mx-auto flex h-full min-h-0 w-full max-w-3xl flex-1 flex-col ${
         hasContent ? "" : "justify-center"
       }`}
     >
       {/* Chat feed */}
       {hasContent && (
-        <div className="flex-1 min-h-0 overflow-y-auto pb-28">
+        <div className="min-h-0 flex-1 overflow-y-auto pb-28">
           <NotesFeed notes={feed} onCopy={handleCopy} onEdit={handleEdit} />
         </div>
       )}
@@ -514,7 +525,7 @@ export default function NeuroscienceTextInput({
       )}
 
       {/* Composer — always visible for follow-up questions */}
-      <div className="sticky bottom-0 z-10 flex w-full items-end bg-background px-3.5 py-2.5">
+      <div className="relative flex w-full items-end px-3.5 py-2.5">
         <div className="relative flex w-full max-w-4xl flex-col rounded-2xl border bg-white shadow dark:bg-gray-900">
           <div className="relative">
             <Textarea
@@ -524,12 +535,12 @@ export default function NeuroscienceTextInput({
               onKeyDown={handleKeyDown}
               placeholder=""
               disabled={isStreaming}
-              className="custom-scrollbar field-sizing-fixed flex-1 resize-none rounded-2xl border-0 bg-transparent pl-4 pr-28 py-4 shadow-none focus:ring-0 focus:outline-none focus-visible:ring-0 focus-visible:outline-none"
+              className="custom-scrollbar field-sizing-fixed flex-1 resize-none rounded-2xl border-0 bg-transparent py-4 pr-28 pl-4 shadow-none focus:ring-0 focus:outline-none focus-visible:ring-0 focus-visible:outline-none"
               rows={1}
               style={{ minHeight: 48 }}
             />
             {/* Buttons absolutely positioned on the right side */}
-            <div className="absolute bottom-2.5 right-2 flex items-center gap-1.5">
+            <div className="absolute right-2 bottom-2.5 flex items-center gap-1.5">
               {isStreaming ? (
                 <Tooltip>
                   <TooltipTrigger asChild>
@@ -558,7 +569,7 @@ export default function NeuroscienceTextInput({
             {/* Typewriter placeholder - shows only on initial load, not after user has typed */}
             {!noteText && !hasTyped && !hasContent && (
               <div
-                className="pointer-events-none absolute inset-0 flex items-start pl-4 pr-28 pt-4"
+                className="pointer-events-none absolute inset-0 flex items-start pt-4 pr-28 pl-4"
                 suppressHydrationWarning
               >
                 <span
@@ -582,7 +593,7 @@ export default function NeuroscienceTextInput({
             )}
             {/* Follow-up placeholder */}
             {!noteText && hasContent && !isStreaming && (
-              <div className="pointer-events-none absolute inset-0 flex items-start pl-4 pr-28 pt-4">
+              <div className="pointer-events-none absolute inset-0 flex items-start pt-4 pr-28 pl-4">
                 <span className="text-muted-foreground text-base md:text-sm">
                   Ask a follow-up question...
                 </span>
