@@ -396,12 +396,20 @@ export default function NoteTextInput({
         content: m.text,
       }));
 
-    // Also include the first user note if it exists
+    // Include the first user note only if it isn't already present in
+    // aiGreetings (the optimistic bubble added during the initial send
+    // duplicates the persisted note text, so we must deduplicate).
     if (hasUserNoteContent && userNotes[0]?.text?.trim()) {
-      conversationHistory.unshift({
-        role: "user" as const,
-        content: userNotes[0].text,
-      });
+      const firstNoteText = userNotes[0].text.trim();
+      const alreadyInHistory = conversationHistory.some(
+        (m) => m.role === "user" && m.content?.trim() === firstNoteText,
+      );
+      if (!alreadyInHistory) {
+        conversationHistory.unshift({
+          role: "user" as const,
+          content: userNotes[0].text,
+        });
+      }
     }
 
     const messages = [

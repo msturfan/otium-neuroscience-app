@@ -45,6 +45,7 @@ export async function generateNoteGreeting(
 User's note content: "${noteContext}"
 
 Important:
+- Use the same language as the user's note.
 - If the note contains multiple bullet points/ideas, pick a meaningful one (preferably not the very first item when possible).
 - Do not invent details that are not in the note.
 - Keep the response concise and friendly.
