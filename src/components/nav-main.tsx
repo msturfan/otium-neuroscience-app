@@ -1,6 +1,6 @@
 "use client";
 
-import { usePathname, useRouter } from "next/navigation";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { type LucideIcon } from "lucide-react";
 
 import {
@@ -8,9 +8,11 @@ import {
   SidebarMenuButton,
   SidebarMenuItem,
 } from "@/components/ui/sidebar";
+import { isNewNoteNavActive } from "@/lib/note-nav";
 
 export function NavMain({
   items,
+  knownNoteIds,
 }: {
   items: {
     title: string;
@@ -18,14 +20,21 @@ export function NavMain({
     icon: LucideIcon;
     isActive?: boolean;
   }[];
+  /** IDs currently shown under My Notes / Neuroscience; used so `/?noteId=` does not keep "New note" highlighted. */
+  knownNoteIds: Set<string> | null;
 }) {
   const pathname = usePathname();
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const noteId = searchParams.get("noteId");
 
-  const isItemActive = (url: string) => {
-    // Handle root path - only active when pathname is exactly "/"
+  const isItemActive = (url: string, itemTitle: string) => {
+    if (itemTitle === "New note") {
+      return isNewNoteNavActive(pathname, noteId, knownNoteIds);
+    }
+    // Handle root path - other items: avoid matching every `/?noteId=` as "/"
     if (url === "/") {
-      return pathname === "/";
+      return pathname === "/" && !noteId;
     }
     // Handle hash/anchor links - never active
     if (url === "#") {
@@ -39,20 +48,24 @@ export function NavMain({
     e.preventDefault();
     const newId = crypto.randomUUID();
     
-    // If on neuroplasticity page, create new neuroplasticity note
     if (pathname.startsWith("/neuroplasticity")) {
       router.push(`/neuroplasticity?noteId=${newId}`);
+    } else if (pathname.startsWith("/workout")) {
+      router.push(`/workout?noteId=${newId}`);
     } else {
-      // Otherwise, create new regular note
       router.push(`/?noteId=${newId}`);
     }
   };
 
+  const hideInbox =
+    pathname.startsWith("/neuroplasticity") || pathname.startsWith("/workout");
+  const navItems = hideInbox ? items.filter((item) => item.url !== "/inbox") : items;
+
   return (
     <SidebarMenu>
-      {items.map((item) => (
+      {navItems.map((item) => (
         <SidebarMenuItem key={item.title}>
-          <SidebarMenuButton asChild isActive={isItemActive(item.url)}>
+          <SidebarMenuButton asChild isActive={isItemActive(item.url, item.title)}>
             {item.title === "New note" ? (
               <a href={item.url} onClick={handleNewNoteClick}>
                 <item.icon />

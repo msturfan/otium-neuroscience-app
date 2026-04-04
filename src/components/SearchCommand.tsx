@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { Search, FileText, Clock } from "lucide-react";
+import { Search } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   CommandDialog,
@@ -14,8 +14,6 @@ import {
 } from "@/components/ui/command";
 import { fetchUserNotesAction } from "@/actions/notes";
 import useNote from "@/hooks/useNote";
-import { getUser } from "@/auth/server";
-
 type UserNote = {
   id: string;
   text: string;
@@ -111,48 +109,52 @@ export function SearchCommand() {
         <span>Search</span>
       </Button>
 
-      <CommandDialog open={open} onOpenChange={setOpen}>
+      <CommandDialog
+        open={open}
+        onOpenChange={setOpen}
+        title="Search notes"
+        description="Search by title or note content"
+        className="gap-0 overflow-hidden p-0 sm:max-w-lg"
+      >
         <CommandInput
-          placeholder="Search your notes..."
+          placeholder="Search notes…"
           value={searchQuery}
           onValueChange={setSearchQuery}
         />
         <CommandList>
           <CommandEmpty>
             {loading ? (
-              <div className="text-muted-foreground py-6 text-center text-sm">
-                Loading notes...
+              <div className="text-muted-foreground px-4 py-8 text-center text-sm">
+                Loading notes…
               </div>
             ) : searchQuery ? (
-              <div className="text-muted-foreground py-6 text-center text-sm">
-                No notes found matching "{searchQuery}"
+              <div className="text-muted-foreground px-4 py-8 text-center text-sm">
+                No notes match &ldquo;{searchQuery}&rdquo;
               </div>
             ) : (
-              <div className="text-muted-foreground py-6 text-center text-sm">
-                No notes yet. Create your first note to get started.
+              <div className="text-muted-foreground px-4 py-8 text-center text-sm">
+                No notes yet. Create one to see it here.
               </div>
             )}
           </CommandEmpty>
 
           {filteredNotes.length > 0 && (
-            <CommandGroup heading="Notes">
+            <CommandGroup>
               {filteredNotes.map((note) => (
                 <CommandItem
                   key={note.id}
                   onSelect={() => handleNoteClick(note.id)}
-                  className="flex flex-col items-start gap-1 p-3"
+                  className="flex cursor-pointer flex-col items-stretch gap-1 p-3 data-[selected=true]:bg-accent"
                 >
-                  <div className="flex w-full items-start justify-between">
-                    <div className="flex items-center gap-2">
-                      <FileText className="text-muted-foreground h-4 w-4" />
-                      <span className="font-medium">{getNoteTitle(note)}</span>
-                    </div>
-                    <div className="text-muted-foreground flex items-center gap-1 text-xs">
-                      <Clock className="h-3 w-3" />
+                  <div className="flex w-full min-w-0 items-start justify-between gap-3">
+                    <span className="font-medium leading-snug">
+                      {getNoteTitle(note)}
+                    </span>
+                    <span className="text-muted-foreground shrink-0 text-xs tabular-nums">
                       {formatDate(note.createdAt)}
-                    </div>
+                    </span>
                   </div>
-                  <p className="text-muted-foreground ml-6 line-clamp-2 text-sm">
+                  <p className="text-muted-foreground line-clamp-2 text-sm">
                     {getNotePreview(note.text)}
                   </p>
                 </CommandItem>

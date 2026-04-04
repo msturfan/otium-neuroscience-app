@@ -9,7 +9,6 @@ import {
   Edit,
   Inbox,
   MessageCircleQuestion,
-  Sparkles,
   Landmark,
   HeartHandshake,
 } from "lucide-react";
@@ -28,6 +27,7 @@ import {
   SidebarRail,
 } from "@/components/ui/sidebar";
 import { User } from "@supabase/supabase-js";
+import { useKnownNoteIds } from "@/providers/KnownNoteIdsProvider";
 
 // Custom logo component for Otium
 const OtiumLogo = ({ className }: { className?: string }) => (
@@ -44,6 +44,10 @@ const OtiumLogo = ({ className }: { className?: string }) => (
 
 export const NeuroplasticityLogo = ({ className }: { className?: string }) => (
   <Brain className={className} />
+);
+
+export const WorkoutLogo = ({ className }: { className?: string }) => (
+  <Dumbbell className={className} />
 );
 
 type UserProfile = {
@@ -72,16 +76,13 @@ const data = {
     },
     {
       name: "Workout",
-      logo: Dumbbell,
+      logo: WorkoutLogo,
       plan: "Free",
+      url: "/workout",
+      isActive: true,
     },
   ],
   navMain: [
-    {
-      title: "Ask AI",
-      url: "#",
-      icon: Sparkles,
-    },
     {
       title: "New note",
       url: "/",
@@ -142,17 +143,19 @@ export function AppSidebar({
         (item) => item.title !== "Calendar" && item.title !== "Settings"
       );
 
+  const { knownNoteIds, setKnownNoteIds } = useKnownNoteIds();
+
   return (
     <Sidebar className="border-r-0" {...props}>
       <SidebarHeader>
         <TeamSwitcher teams={data.teams} user={user} />
         <div className="flex flex-col gap-2">
           <SearchCommand />
-          <NavMain items={data.navMain} />
+          <NavMain items={data.navMain} knownNoteIds={knownNoteIds} />
         </div>
       </SidebarHeader>
       <SidebarContent>
-        <NavNotes user={user} />
+        <NavNotes user={user} onKnownNoteIdsChange={setKnownNoteIds} />
         <NavSecondary items={navSecondaryFiltered} className="mt-auto" />
       </SidebarContent>
       <SidebarFooter>

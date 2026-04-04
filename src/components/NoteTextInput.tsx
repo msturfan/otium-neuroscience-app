@@ -4,6 +4,7 @@ import { useSearchParams, useRouter } from "next/navigation";
 import Image from "next/image";
 import { ChangeEvent, useEffect, useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
+import { NOTE_PERSISTED_EVENT } from "@/components/nav-actions";
 import { User } from "@supabase/supabase-js";
 import { Square } from "lucide-react";
 
@@ -552,6 +553,11 @@ export default function NoteTextInput({
               if (updateRes?.isFirstNoteOfDay && user) {
                 window.dispatchEvent(new CustomEvent("firstDailyNoteSaved"));
               }
+              window.dispatchEvent(
+                new CustomEvent(NOTE_PERSISTED_EVENT, {
+                  detail: { noteId },
+                }),
+              );
             } else {
               toast.error("Failed to create note");
               return; // Don't proceed with clearing if failed
@@ -562,6 +568,11 @@ export default function NoteTextInput({
             if (res?.isFirstNoteOfDay && user) {
               window.dispatchEvent(new CustomEvent("firstDailyNoteSaved"));
             }
+            window.dispatchEvent(
+              new CustomEvent(NOTE_PERSISTED_EVENT, {
+                detail: { noteId },
+              }),
+            );
           }
         }
       }

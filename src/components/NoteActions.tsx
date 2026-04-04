@@ -17,20 +17,24 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Button } from "./ui/button";
-import { Archive, Loader2, MoreVertical, Trash2 } from "lucide-react";
+import { Archive, Loader2, MoreVertical, Pin, Trash2 } from "lucide-react";
 import { useState, useTransition } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { toast } from "sonner";
 import { deleteNoteAction } from "@/actions/notes";
 import { deleteNeuroscienceAction } from "@/actions/neuroscience";
+import { deleteWorkoutAction } from "@/actions/workout";
 import React from "react";
+import { usePinnedChats } from "@/hooks/usePinnedChats";
+
+export type NoteComposerKind = "note" | "neuroscience" | "workout";
 
 type Props = {
   noteId: string;
   deleteNoteLocally: (noteId: string) => void;
   isGuest?: boolean;
   onGuestDelete?: () => void;
-  isNeuroscience?: boolean;
+  composerKind?: NoteComposerKind;
 };
 
 function NoteActions({
@@ -38,7 +42,7 @@ function NoteActions({
   deleteNoteLocally,
   isGuest = false,
   onGuestDelete,
-  isNeuroscience = false,
+  composerKind = "note",
 }: Props) {
   const router = useRouter();
   const noteIdParam = useSearchParams().get("noteId") || "";
@@ -47,9 +51,37 @@ function NoteActions({
 
   const deleteRef = React.useRef<HTMLButtonElement>(null);
   const cancelRef = React.useRef<HTMLButtonElement>(null);
-  
-  const deleteAction = isNeuroscience ? deleteNeuroscienceAction : deleteNoteAction;
-  const redirectPath = isNeuroscience ? "/neuroplasticity" : "/";
+
+  const pinnedContext =
+    composerKind === "neuroscience"
+      ? "neuroscience"
+      : composerKind === "workout"
+        ? "workout"
+        : "otium";
+  const { togglePin, isPinned } = usePinnedChats(pinnedContext);
+
+  const handleTogglePin = () => {
+    const wasPinned = isPinned(noteId);
+    togglePin(noteId);
+    toast(wasPinned ? "Chat unpinned" : "Chat pinned", {
+      description: wasPinned
+        ? "Removed from pinned in the sidebar."
+        : "Shown at the top of your sidebar list.",
+    });
+  };
+
+  const deleteAction =
+    composerKind === "neuroscience"
+      ? deleteNeuroscienceAction
+      : composerKind === "workout"
+        ? deleteWorkoutAction
+        : deleteNoteAction;
+  const redirectPath =
+    composerKind === "neuroscience"
+      ? "/neuroplasticity"
+      : composerKind === "workout"
+        ? "/workout"
+        : "/";
 
   const handleDeleteNote = () => {
     if (isGuest && onGuestDelete) {
@@ -122,7 +154,14 @@ function NoteActions({
             <MoreVertical className="h-4 w-4" />
           </Button>
         </DropdownMenuTrigger>
-        <DropdownMenuContent align="end" className="w-40">
+        <DropdownMenuContent align="end" className="w-44">
+          <DropdownMenuItem
+            onClick={handleTogglePin}
+            className="cursor-pointer"
+          >
+            <Pin className="mr-2 h-4 w-4" />
+            {isPinned(noteId) ? "Unpin chat" : "Pin chat"}
+          </DropdownMenuItem>
           <DropdownMenuItem
             onClick={handleArchiveNote}
             className="cursor-pointer"

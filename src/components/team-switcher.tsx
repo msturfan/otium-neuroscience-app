@@ -69,17 +69,20 @@ export function TeamSwitcher({
     }
     
     if (team.url) {
-      // If guest user tries to access neuroplasticity, redirect to signup
-      if (team.url === "/neuroplasticity" && !user) {
+      if (
+        (team.url === "/neuroplasticity" || team.url === "/workout") &&
+        !user
+      ) {
         router.push("/sign-up");
         return;
       }
-      
-      // For neuroplasticity, always include a noteId to avoid redirect
-      // Use push instead of replace to ensure navigation happens
+
       if (team.url === "/neuroplasticity") {
         const newId = crypto.randomUUID();
         router.push(`/neuroplasticity?noteId=${newId}`);
+      } else if (team.url === "/workout") {
+        const newId = crypto.randomUUID();
+        router.push(`/workout?noteId=${newId}`);
       } else if (team.url === "/") {
         // For home page, also ensure we navigate with a noteId
         const newId = crypto.randomUUID();
@@ -113,7 +116,7 @@ export function TeamSwitcher({
             sideOffset={4}
           >
             <DropdownMenuLabel className="text-muted-foreground text-xs">
-              Teams
+              Apps
             </DropdownMenuLabel>
             {teams.map((team) => (
               <DropdownMenuItem

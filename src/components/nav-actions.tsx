@@ -1,25 +1,22 @@
 "use client";
 
 import * as React from "react";
-import {
-  ArrowDown,
-  ArrowUp,
-  Bell,
-  FileText,
-  GalleryVerticalEnd,
-  LineChart,
-  Link,
-  LogOut,
-  MoreHorizontal,
-  Settings2,
-} from "lucide-react";
-import { useRouter } from "next/navigation";
+import { Link, Loader2, MoreHorizontal, Pin, Settings2, Trash2 } from "lucide-react";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { toast } from "sonner";
-import { logOutAction } from "@/actions/users";
 import NextLink from "next/link";
 import type { User } from "@supabase/supabase-js";
 
 import { Button } from "@/components/ui/button";
+import {
+  Dialog,
+  DialogClose,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import {
   Popover,
   PopoverContent,
@@ -35,7 +32,22 @@ import {
   SidebarMenuItem,
 } from "@/components/ui/sidebar";
 import DarkModeToggle from "./DarkModeToggle";
-import { AnalyticsDialog } from "./AnalyticsDialog";
+import {
+  readPinnedIds,
+  usePinnedChats,
+  writePinnedIds,
+  type PinnedChatContext,
+} from "@/hooks/usePinnedChats";
+import { deleteNoteAction } from "@/actions/notes";
+import { deleteNeuroscienceAction } from "@/actions/neuroscience";
+import { deleteWorkoutAction } from "@/actions/workout";
+import { shouldHideComposerOverflowMenu } from "@/lib/note-nav";
+import { useKnownNoteIds } from "@/providers/KnownNoteIdsProvider";
+
+export const NOTE_DELETED_EVENT = "otium:note-deleted";
+
+/** Fired after a note is persisted so the sidebar can refresh `knownNoteIds` (header menu visibility). */
+export const NOTE_PERSISTED_EVENT = "otium:note-persisted";
 
 const data = [
   [
@@ -43,54 +55,52 @@ const data = [
       label: "Customize Page",
       icon: Settings2,
     },
-    {
-      label: "Turn into wiki",
-      icon: FileText,
-    },
   ],
   [
     {
       label: "Copy Link",
       icon: Link,
     },
-  ],
-  [
     {
-      label: "View analytics",
-      icon: LineChart,
-    },
-    {
-      label: "Version History",
-      icon: GalleryVerticalEnd,
-    },
-    {
-      label: "Notifications",
-      icon: Bell,
+      label: "Pin chat",
+      icon: Pin,
+      pinAction: true as const,
     },
   ],
   [
     {
-      label: "Import",
-      icon: ArrowUp,
-    },
-    {
-      label: "Export",
-      icon: ArrowDown,
-    },
-  ],
-  [
-    {
-      label: "Log Out",
-      icon: LogOut,
+      label: "Delete",
+      icon: Trash2,
+      deleteAction: true as const,
     },
   ],
 ];
 
 export function NavActions({ user }: { user: User | null }) {
   const [isOpen, setIsOpen] = React.useState(false);
-  const [isLoggingOut, setIsLoggingOut] = React.useState(false);
-  const [isAnalyticsOpen, setIsAnalyticsOpen] = React.useState(false);
+  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = React.useState(false);
+  const [isPending, startTransition] = React.useTransition();
   const router = useRouter();
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
+  const noteId = searchParams.get("noteId");
+  const { knownNoteIds } = useKnownNoteIds();
+  const hideComposerOverflowMenu =
+    user != null &&
+    shouldHideComposerOverflowMenu(pathname, noteId, knownNoteIds);
+
+  const isNotesContext =
+    pathname === "/" ||
+    pathname.startsWith("/neuroplasticity") ||
+    pathname.startsWith("/workout");
+  const pinnedContext: PinnedChatContext = pathname.startsWith(
+    "/neuroplasticity",
+  )
+    ? "neuroscience"
+    : pathname.startsWith("/workout")
+      ? "workout"
+      : "otium";
+  const { togglePin, isPinned } = usePinnedChats(pinnedContext);
 
   React.useEffect(() => {
     setIsOpen(false);
@@ -119,99 +129,210 @@ export function NavActions({ user }: { user: User | null }) {
     }
   };
 
-  const handleSignOut = async () => {
-    setIsLoggingOut(true);
-
-    const { errorMessage } = await logOutAction();
-
-    if (!errorMessage) {
-      router.push(`/?toastType=logOut`);
-    } else {
-      toast("Error", {
-        description: errorMessage,
+  const handlePinChat = () => {
+    if (!noteId) {
+      toast("No chat open", {
+        description: "Open a note first, then you can pin it to the sidebar.",
       });
+      return;
     }
-
-    setIsLoggingOut(false);
+    if (!isNotesContext) {
+      toast("Pin unavailable", {
+        description:
+          "Pinning is only available on Otium, Neuroscience, or Workout chats.",
+      });
+      return;
+    }
+    const wasPinned = isPinned(noteId);
+    togglePin(noteId);
+    toast(wasPinned ? "Chat unpinned" : "Chat pinned", {
+      description: wasPinned
+        ? "Removed from pinned in the sidebar."
+        : "Shown at the top of your sidebar list.",
+    });
     setIsOpen(false);
   };
 
-  const handleViewAnalytics = () => {
-    setIsAnalyticsOpen(true);
+  const handleDeleteMenuClick = () => {
+    if (!noteId) {
+      toast("No chat open", {
+        description: "Open a note first, then you can delete it from here.",
+      });
+      return;
+    }
+    if (!isNotesContext) {
+      toast("Delete unavailable", {
+        description:
+          "Deleting a chat is only available on Otium, Neuroscience, or Workout.",
+      });
+      return;
+    }
     setIsOpen(false);
+    setIsDeleteDialogOpen(true);
+  };
+
+  const handleConfirmDeleteChat = () => {
+    if (!noteId) return;
+    const id = noteId;
+    const redirectPath =
+      pinnedContext === "neuroscience"
+        ? "/neuroplasticity"
+        : pinnedContext === "workout"
+          ? "/workout"
+          : "/";
+    const deleteAction =
+      pinnedContext === "neuroscience"
+        ? deleteNeuroscienceAction
+        : pinnedContext === "workout"
+          ? deleteWorkoutAction
+          : deleteNoteAction;
+
+    startTransition(async () => {
+      const { errorMessage } = await deleteAction(id);
+
+      if (!errorMessage) {
+        const current = readPinnedIds(pinnedContext);
+        if (current.includes(id)) {
+          writePinnedIds(
+            pinnedContext,
+            current.filter((x) => x !== id),
+          );
+        }
+        window.dispatchEvent(
+          new CustomEvent(NOTE_DELETED_EVENT, { detail: { noteId: id } }),
+        );
+        toast("Note Deleted", {
+          description: "You have successfully deleted the note",
+        });
+        if (searchParams.get("noteId") === id) {
+          router.replace(redirectPath);
+        }
+        router.refresh();
+      } else {
+        toast("Error", {
+          description: errorMessage,
+        });
+      }
+      setIsDeleteDialogOpen(false);
+    });
   };
 
   return (
-    <>
-      <div className="flex items-center gap-2 text-sm">
-        {user ? (
-          <>
-            <DarkModeToggle />
-            <Popover open={isOpen} onOpenChange={setIsOpen}>
-              <PopoverTrigger asChild>
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className="data-[state=open]:bg-accent h-7 w-7"
+    <div className="flex items-center gap-2 text-sm">
+      {user ? (
+        <>
+          <DarkModeToggle />
+          {!hideComposerOverflowMenu && (
+            <>
+              <Popover open={isOpen} onOpenChange={setIsOpen}>
+                <PopoverTrigger asChild>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="data-[state=open]:bg-accent h-7 w-7"
+                  >
+                    <MoreHorizontal />
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent
+                  className="w-56 overflow-hidden rounded-lg p-0"
+                  align="end"
                 >
-                  <MoreHorizontal />
-                </Button>
-              </PopoverTrigger>
-              <PopoverContent
-                className="w-56 overflow-hidden rounded-lg p-0"
-                align="end"
+                  <Sidebar collapsible="none" className="bg-transparent">
+                    <SidebarContent>
+                      {data.map((group, index) => (
+                        <SidebarGroup
+                          key={index}
+                          className="border-b last:border-none"
+                        >
+                          <SidebarGroupContent className="gap-0">
+                            <SidebarMenu>
+                              {group.map((item, itemIndex) => {
+                                const pinLabel =
+                                  noteId && isPinned(noteId)
+                                    ? "Unpin chat"
+                                    : "Pin chat";
+                                const displayLabel =
+                                  "pinAction" in item && item.pinAction
+                                    ? pinLabel
+                                    : item.label;
+
+                                return (
+                                  <SidebarMenuItem key={itemIndex}>
+                                    <SidebarMenuButton
+                                      onClick={
+                                        "deleteAction" in item &&
+                                        item.deleteAction
+                                          ? handleDeleteMenuClick
+                                          : item.label === "Copy Link"
+                                            ? handleCopyLink
+                                            : "pinAction" in item &&
+                                                item.pinAction
+                                              ? handlePinChat
+                                              : undefined
+                                      }
+                                    >
+                                      <item.icon />{" "}
+                                      <span>{displayLabel}</span>
+                                    </SidebarMenuButton>
+                                  </SidebarMenuItem>
+                                );
+                              })}
+                            </SidebarMenu>
+                          </SidebarGroupContent>
+                        </SidebarGroup>
+                      ))}
+                    </SidebarContent>
+                  </Sidebar>
+                </PopoverContent>
+              </Popover>
+
+              <Dialog
+                open={isDeleteDialogOpen}
+                onOpenChange={setIsDeleteDialogOpen}
               >
-                <Sidebar collapsible="none" className="bg-transparent">
-                  <SidebarContent>
-                    {data.map((group, index) => (
-                      <SidebarGroup
-                        key={index}
-                        className="border-b last:border-none"
-                      >
-                        <SidebarGroupContent className="gap-0">
-                          <SidebarMenu>
-                            {group.map((item, index) => (
-                              <SidebarMenuItem key={index}>
-                                <SidebarMenuButton
-                                  onClick={
-                                    item.label === "Log Out"
-                                      ? handleSignOut
-                                      : item.label === "Copy Link"
-                                        ? handleCopyLink
-                                        : item.label === "View analytics"
-                                          ? handleViewAnalytics
-                                          : undefined
-                                  }
-                                  disabled={
-                                    item.label === "Log Out" && isLoggingOut
-                                  }
-                                >
-                                  <item.icon /> <span>{item.label}</span>
-                                </SidebarMenuButton>
-                              </SidebarMenuItem>
-                            ))}
-                          </SidebarMenu>
-                        </SidebarGroupContent>
-                      </SidebarGroup>
-                    ))}
-                  </SidebarContent>
-                </Sidebar>
-              </PopoverContent>
-            </Popover>
-          </>
-        ) : (
-          <>
-            <Button asChild variant="outline" size="sm">
-              <NextLink href="/login">Log In</NextLink>
-            </Button>
-            <Button asChild size="sm">
-              <NextLink href="/sign-up">Sign Up</NextLink>
-            </Button>
-            <DarkModeToggle />
-          </>
-        )}
-      </div>
-      <AnalyticsDialog open={isAnalyticsOpen} onOpenChange={setIsAnalyticsOpen} />
-    </>
+                <DialogContent>
+                  <DialogHeader>
+                    <DialogTitle>Delete this chat?</DialogTitle>
+                    <DialogDescription>
+                      This cannot be undone. The note will be permanently
+                      removed.
+                    </DialogDescription>
+                  </DialogHeader>
+                  <DialogFooter>
+                    <DialogClose asChild>
+                      <Button variant="outline" disabled={isPending}>
+                        Cancel
+                      </Button>
+                    </DialogClose>
+                    <Button
+                      variant="destructive"
+                      disabled={isPending}
+                      onClick={handleConfirmDeleteChat}
+                    >
+                      {isPending ? (
+                        <Loader2 className="size-4 animate-spin" />
+                      ) : (
+                        "Delete"
+                      )}
+                    </Button>
+                  </DialogFooter>
+                </DialogContent>
+              </Dialog>
+            </>
+          )}
+        </>
+      ) : (
+        <>
+          <Button asChild variant="outline" size="sm">
+            <NextLink href="/login">Log In</NextLink>
+          </Button>
+          <Button asChild size="sm">
+            <NextLink href="/sign-up">Sign Up</NextLink>
+          </Button>
+          <DarkModeToggle />
+        </>
+      )}
+    </div>
   );
 }

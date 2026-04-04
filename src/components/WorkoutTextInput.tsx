@@ -11,7 +11,7 @@ import {
 } from "react";
 import { toast } from "sonner";
 import { User } from "@supabase/supabase-js";
-import { Brain, Square } from "lucide-react";
+import { Dumbbell, Square } from "lucide-react";
 
 import { Textarea } from "./ui/textarea";
 import NewNoteButton from "./NewNoteButton";
@@ -19,7 +19,7 @@ import NotesFeed, { NoteLike } from "./NotesFeed";
 
 import useNote from "@/hooks/useNote";
 import { GuestNote } from "@/providers/NoteProvider";
-import { updateNeuroscienceAction, createNeuroscienceAction } from "@/actions/neuroscience";
+import { updateWorkoutAction, createWorkoutAction } from "@/actions/workout";
 //import { generateNoteTitle } from "@/actions/generate-title";
 import MicrophoneButton from "./MicrophoneButton";
 import { Button } from "./ui/button";
@@ -39,7 +39,7 @@ type Props = {
   welcomeMessage?: string;
 };
 
-export default function NeuroscienceTextInput({
+export default function WorkoutTextInput({
   noteId,
   startingNoteText,
   user,
@@ -111,7 +111,7 @@ export default function NeuroscienceTextInput({
         );
         if (messagesToSave.length > 0) {
           const serialized = JSON.stringify(messagesToSave);
-          sessionStorage.setItem(`chat-neuro-${noteId}`, serialized);
+          sessionStorage.setItem(`chat-workout-${noteId}`, serialized);
         }
       } catch (error) {
         console.error("Failed to save chat messages to sessionStorage:", error);
@@ -135,7 +135,7 @@ export default function NeuroscienceTextInput({
 
       if (typeof window !== "undefined") {
         try {
-          const stored = sessionStorage.getItem(`chat-neuro-${noteId}`);
+          const stored = sessionStorage.getItem(`chat-workout-${noteId}`);
           if (stored) {
             const parsed = JSON.parse(stored);
             if (parsed.length > 0) setChatMessages(parsed);
@@ -147,7 +147,7 @@ export default function NeuroscienceTextInput({
     } else if (typeof window !== "undefined") {
       if (chatMessages.length === 0) {
         try {
-          const stored = sessionStorage.getItem(`chat-neuro-${noteId}`);
+          const stored = sessionStorage.getItem(`chat-workout-${noteId}`);
           if (stored) {
             const parsed = JSON.parse(stored);
             if (parsed.length > 0) setChatMessages(parsed);
@@ -290,7 +290,7 @@ export default function NeuroscienceTextInput({
         const response = await fetch("/api/chat", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ messages }),
+          body: JSON.stringify({ messages, promptType: "workout" }),
           signal: controller.signal,
         });
 
@@ -367,13 +367,12 @@ export default function NeuroscienceTextInput({
     [chatMessages, hasUserNoteContent, userNotes],
   );
 
-  // Fallback to a short, neuroscience-focused error message
   const fallbackNonStreaming = async () => {
     setChatMessages((prev) => [
       ...prev,
       {
         id: `ai-error-${Date.now()}`,
-        text: "I couldn’t generate a response right now. Try again, or rephrase your question with a specific situation or goal.",
+        text: "I couldn’t generate a response right now. Try again, or add your goal, available time, and any equipment you have.",
         createdAt: new Date(),
         isAI: true,
       },
@@ -421,11 +420,11 @@ export default function NeuroscienceTextInput({
           },
         });
       } else {
-        const res = await updateNeuroscienceAction(noteId, textToSave);
+        const res = await updateWorkoutAction(noteId, textToSave);
         if (res?.errorMessage) {
-          const created = await createNeuroscienceAction(noteId);
+          const created = await createWorkoutAction(noteId);
           if (!created?.errorMessage) {
-            await updateNeuroscienceAction(noteId, textToSave);
+            await updateWorkoutAction(noteId, textToSave);
             window.dispatchEvent(
               new CustomEvent(NOTE_PERSISTED_EVENT, {
                 detail: { noteId },
@@ -521,7 +520,7 @@ export default function NeuroscienceTextInput({
 
       {!hasContent && welcomeMessage && (
         <div className="mb-3 flex flex-col items-center text-center">
-          <Brain className="mb-1 h-6 w-6 text-foreground" />
+          <Dumbbell className="mb-1 h-6 w-6 text-foreground" />
           <span
             className="text-sm font-medium text-foreground md:text-base"
             style={{
