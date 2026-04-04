@@ -31,6 +31,7 @@ import useNote from "@/hooks/useNote";
 import NoteActions from "./NoteActions";
 import { User } from "@supabase/supabase-js";
 import { usePinnedChats } from "@/hooks/usePinnedChats";
+import { NOTE_DELETED_EVENT } from "@/components/nav-actions";
 
 type UserNote = {
   id: string;
@@ -105,6 +106,17 @@ export function NavNotes({ user, onKnownNoteIdsChange }: Props) {
 
     fetchNotes();
   }, [user, isNeuroplasticity]);
+
+  useEffect(() => {
+    const onNoteDeleted = (e: Event) => {
+      const noteId = (e as CustomEvent<{ noteId: string }>).detail?.noteId;
+      if (!noteId) return;
+      setUserNotes((prev) => prev.filter((n) => n.id !== noteId));
+      deleteGuestNote(noteId);
+    };
+    window.addEventListener(NOTE_DELETED_EVENT, onNoteDeleted);
+    return () => window.removeEventListener(NOTE_DELETED_EVENT, onNoteDeleted);
+  }, [deleteGuestNote]);
 
   const handleNoteClick = (noteId: string) => {
     const basePath = isNeuroplasticity ? "/neuroplasticity" : "/";

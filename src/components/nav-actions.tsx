@@ -1,14 +1,22 @@
 "use client";
 
 import * as React from "react";
-import { Link, LogOut, MoreHorizontal, Pin, Settings2 } from "lucide-react";
+import { Link, Loader2, MoreHorizontal, Pin, Settings2, Trash2 } from "lucide-react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { toast } from "sonner";
-import { logOutAction } from "@/actions/users";
 import NextLink from "next/link";
 import type { User } from "@supabase/supabase-js";
 
 import { Button } from "@/components/ui/button";
+import {
+  Dialog,
+  DialogClose,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import {
   Popover,
   PopoverContent,
@@ -24,7 +32,15 @@ import {
   SidebarMenuItem,
 } from "@/components/ui/sidebar";
 import DarkModeToggle from "./DarkModeToggle";
-import { usePinnedChats } from "@/hooks/usePinnedChats";
+import {
+  readPinnedIds,
+  usePinnedChats,
+  writePinnedIds,
+} from "@/hooks/usePinnedChats";
+import { deleteNoteAction } from "@/actions/notes";
+import { deleteNeuroscienceAction } from "@/actions/neuroscience";
+
+export const NOTE_DELETED_EVENT = "otium:note-deleted";
 
 const data = [
   [
@@ -46,15 +62,17 @@ const data = [
   ],
   [
     {
-      label: "Log Out",
-      icon: LogOut,
+      label: "Delete",
+      icon: Trash2,
+      deleteAction: true as const,
     },
   ],
 ];
 
 export function NavActions({ user }: { user: User | null }) {
   const [isOpen, setIsOpen] = React.useState(false);
-  const [isLoggingOut, setIsLoggingOut] = React.useState(false);
+  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = React.useState(false);
+  const [isPending, startTransition] = React.useTransition();
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
@@ -115,21 +133,59 @@ export function NavActions({ user }: { user: User | null }) {
     setIsOpen(false);
   };
 
-  const handleSignOut = async () => {
-    setIsLoggingOut(true);
-
-    const { errorMessage } = await logOutAction();
-
-    if (!errorMessage) {
-      router.push(`/?toastType=logOut`);
-    } else {
-      toast("Error", {
-        description: errorMessage,
+  const handleDeleteMenuClick = () => {
+    if (!noteId) {
+      toast("No chat open", {
+        description: "Open a note first, then you can delete it from here.",
       });
+      return;
     }
-
-    setIsLoggingOut(false);
+    if (!isNotesContext) {
+      toast("Delete unavailable", {
+        description: "Deleting a chat is only available on Otium or Neuroscience notes.",
+      });
+      return;
+    }
     setIsOpen(false);
+    setIsDeleteDialogOpen(true);
+  };
+
+  const handleConfirmDeleteChat = () => {
+    if (!noteId) return;
+    const id = noteId;
+    const redirectPath = isNeuroscience ? "/neuroplasticity" : "/";
+    const deleteAction = isNeuroscience
+      ? deleteNeuroscienceAction
+      : deleteNoteAction;
+
+    startTransition(async () => {
+      const { errorMessage } = await deleteAction(id);
+
+      if (!errorMessage) {
+        const current = readPinnedIds(isNeuroscience);
+        if (current.includes(id)) {
+          writePinnedIds(
+            isNeuroscience,
+            current.filter((x) => x !== id),
+          );
+        }
+        window.dispatchEvent(
+          new CustomEvent(NOTE_DELETED_EVENT, { detail: { noteId: id } }),
+        );
+        toast("Note Deleted", {
+          description: "You have successfully deleted the note",
+        });
+        if (searchParams.get("noteId") === id) {
+          router.replace(redirectPath);
+        }
+        router.refresh();
+      } else {
+        toast("Error", {
+          description: errorMessage,
+        });
+      }
+      setIsDeleteDialogOpen(false);
+    });
   };
 
   return (
@@ -165,24 +221,22 @@ export function NavActions({ user }: { user: User | null }) {
                               noteId && isPinned(noteId)
                                 ? "Unpin chat"
                                 : "Pin chat";
-                            const displayLabel = item.pinAction
-                              ? pinLabel
-                              : item.label;
+                            const displayLabel =
+                              "pinAction" in item && item.pinAction
+                                ? pinLabel
+                                : item.label;
 
                             return (
                               <SidebarMenuItem key={itemIndex}>
                                 <SidebarMenuButton
                                   onClick={
-                                    item.label === "Log Out"
-                                      ? handleSignOut
+                                    "deleteAction" in item && item.deleteAction
+                                      ? handleDeleteMenuClick
                                       : item.label === "Copy Link"
                                         ? handleCopyLink
-                                        : item.pinAction
+                                        : "pinAction" in item && item.pinAction
                                           ? handlePinChat
                                           : undefined
-                                  }
-                                  disabled={
-                                    item.label === "Log Out" && isLoggingOut
                                   }
                                 >
                                   <item.icon /> <span>{displayLabel}</span>
@@ -198,6 +252,35 @@ export function NavActions({ user }: { user: User | null }) {
               </Sidebar>
             </PopoverContent>
           </Popover>
+
+          <Dialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
+            <DialogContent>
+              <DialogHeader>
+                <DialogTitle>Delete this chat?</DialogTitle>
+                <DialogDescription>
+                  This cannot be undone. The note will be permanently removed.
+                </DialogDescription>
+              </DialogHeader>
+              <DialogFooter>
+                <DialogClose asChild>
+                  <Button variant="outline" disabled={isPending}>
+                    Cancel
+                  </Button>
+                </DialogClose>
+                <Button
+                  variant="destructive"
+                  disabled={isPending}
+                  onClick={handleConfirmDeleteChat}
+                >
+                  {isPending ? (
+                    <Loader2 className="size-4 animate-spin" />
+                  ) : (
+                    "Delete"
+                  )}
+                </Button>
+              </DialogFooter>
+            </DialogContent>
+          </Dialog>
         </>
       ) : (
         <>
