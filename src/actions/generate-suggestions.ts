@@ -1,6 +1,6 @@
 "use server";
 
-import { geminiChat } from "@/lib/gemini";
+import { groqChat } from "@/lib/groq";
 
 export async function generateNoteSuggestions(
   noteText: string,
@@ -45,7 +45,7 @@ Suggestions:`;
     const systemPrompt =
       "You review daily notes and provide short, actionable suggestions. Return only bullet points.";
 
-    const responseText = await geminiChat(systemPrompt, prompt);
+    const responseText = await groqChat(systemPrompt, prompt);
 
     if (!responseText?.trim()) {
       return {
@@ -121,7 +121,7 @@ Suggestions:`;
       errorMessage: null,
     };
   } catch (error) {
-    console.error("[Gemini Error] generating suggestions:", error);
+    console.error("[Groq Error] generating suggestions:", error);
     return {
       suggestions: [],
       errorMessage:

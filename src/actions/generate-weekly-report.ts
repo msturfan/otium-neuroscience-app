@@ -3,7 +3,7 @@
 import { prisma } from "@/db/prisma";
 import { getUser } from "@/auth/server";
 import { getLastWeekStart } from "@/lib/timezone-utils";
-import { geminiChat } from "@/lib/gemini";
+import { groqChat } from "@/lib/groq";
 
 /**
  * Generates a weekly report for a user based on their notes from the last 7 days
@@ -101,7 +101,7 @@ Weekly Report:`;
     const systemPrompt =
       "You are an expert life analyst generating insightful weekly reports from user notes.";
 
-    const reportText = await geminiChat(systemPrompt, prompt);
+    const reportText = await groqChat(systemPrompt, prompt);
 
     if (!reportText?.trim()) {
       return {
@@ -134,7 +134,7 @@ Weekly Report:`;
       errorMessage: null,
     };
   } catch (error) {
-    console.error("[Gemini Error] generating weekly report:", error);
+    console.error("[Groq Error] generating weekly report:", error);
     return {
       reportText: null,
       errorMessage:

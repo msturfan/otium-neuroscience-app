@@ -1,7 +1,7 @@
 "use server";
 
 import { NEUROSCIENCE_SYSTEM_PROMPT } from "@/lib/neuroscience-system-prompt";
-import { geminiChat } from "@/lib/gemini";
+import { groqChat } from "@/lib/groq";
 
 export async function generateNeuroscienceAnswer(
   questionText: string,
@@ -26,7 +26,7 @@ ${cleanText}
 
 Answer (follow the response structure):`;
 
-    const answerText = await geminiChat(NEUROSCIENCE_SYSTEM_PROMPT, userMessage);
+    const answerText = await groqChat(NEUROSCIENCE_SYSTEM_PROMPT, userMessage);
 
     if (!answerText?.trim()) {
       return {
@@ -77,7 +77,7 @@ Answer (follow the response structure):`;
       errorMessage: null,
     };
   } catch (error) {
-    console.error("[Gemini Error] generating neuroscience answer:", error);
+    console.error("[Groq Error] generating neuroscience answer:", error);
     return {
       answer: null,
       errorMessage: "An error occurred while generating answer. Please try again.",
