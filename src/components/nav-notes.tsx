@@ -20,7 +20,6 @@ import {
 } from "@/components/ui/tooltip";
 import { fetchUserNotesAction } from "@/actions/notes";
 import { fetchUserNeuroscienceAction } from "@/actions/neuroscience";
-import { formatNoteDate } from "@/lib/utils";
 import { Badge } from "@/components/ui/badge";
 import useNote from "@/hooks/useNote";
 import NoteActions from "./NoteActions";
@@ -129,7 +128,7 @@ export function NavNotes({ user }: Props) {
       <SidebarGroupLabel>
         {isNeuroplasticity ? "Neuroscience" : "My Notes"}
         {isGuest && (
-          <Badge variant="secondary" className="ml-2 text-xs">
+          <Badge variant="secondary" className="ml-2 text-xs normal-case">
             Guest
           </Badge>
         )}
@@ -159,14 +158,9 @@ export function NavNotes({ user }: Props) {
                 onClick={() => handleNoteClick(note.id)}
                 className="pr-10"
               >
-                <div className="flex min-w-0 flex-1 flex-col overflow-hidden">
-                  <div className="truncate text-sm font-medium">
-                    {getNoteTitle(note)}
-                  </div>
-                  <div className="text-muted-foreground text-xs">
-                    {formatNoteDate(note.createdAt)}
-                  </div>
-                </div>
+                <span className="truncate text-sm font-medium">
+                  {getNoteTitle(note)}
+                </span>
               </SidebarMenuButton>
 
               {user ? (
