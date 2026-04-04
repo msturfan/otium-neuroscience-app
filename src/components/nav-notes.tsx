@@ -2,9 +2,14 @@
 
 import { useEffect, useState } from "react";
 import { useRouter, useSearchParams, usePathname } from "next/navigation";
-import { Copy, Loader2 } from "lucide-react";
+import { ChevronRight, Copy, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import Image from "next/image";
+import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from "@/components/ui/collapsible";
 import {
   SidebarGroup,
   SidebarGroupLabel,
@@ -12,6 +17,7 @@ import {
   SidebarMenuButton,
   SidebarMenuItem,
 } from "@/components/ui/sidebar";
+import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import {
   Tooltip,
@@ -20,7 +26,6 @@ import {
 } from "@/components/ui/tooltip";
 import { fetchUserNotesAction } from "@/actions/notes";
 import { fetchUserNeuroscienceAction } from "@/actions/neuroscience";
-import { formatNoteDate } from "@/lib/utils";
 import { Badge } from "@/components/ui/badge";
 import useNote from "@/hooks/useNote";
 import NoteActions from "./NoteActions";
@@ -38,6 +43,9 @@ type Props = {
   user: User | null;
 };
 
+const SIDEBAR_NOTES_EXPANDED_KEY = "otium.sidebar.myNotesExpanded";
+const SIDEBAR_NEUROSCIENCE_EXPANDED_KEY = "otium.sidebar.neuroscienceExpanded";
+
 export function NavNotes({ user }: Props) {
   const router = useRouter();
   const pathname = usePathname();
@@ -46,9 +54,32 @@ export function NavNotes({ user }: Props) {
   
   const isNeuroplasticity = pathname.startsWith("/neuroplasticity");
 
+  const expandedStorageKey = isNeuroplasticity
+    ? SIDEBAR_NEUROSCIENCE_EXPANDED_KEY
+    : SIDEBAR_NOTES_EXPANDED_KEY;
+
+  const [sectionOpen, setSectionOpen] = useState(true);
   const [userNotes, setUserNotes] = useState<UserNote[]>([]);
   const [loading, setLoading] = useState(true);
   const { guestNotes, deleteGuestNote } = useNote();
+
+  useEffect(() => {
+    try {
+      const stored = localStorage.getItem(expandedStorageKey);
+      setSectionOpen(stored === null ? true : stored === "true");
+    } catch {
+      setSectionOpen(true);
+    }
+  }, [expandedStorageKey]);
+
+  const handleSectionOpenChange = (open: boolean) => {
+    setSectionOpen(open);
+    try {
+      localStorage.setItem(expandedStorageKey, String(open));
+    } catch {
+      /* ignore */
+    }
+  };
 
   // Fetch user notes on mount or when user/path changes
   useEffect(() => {
@@ -113,125 +144,140 @@ export function NavNotes({ user }: Props) {
   const displayNotes = user ? userNotes : guestNotes;
   const isGuest = !user;
 
-  if (loading) {
-    return (
-      <SidebarGroup>
-        <SidebarGroupLabel>{isNeuroplasticity ? "Neuroscience" : "My Notes"}</SidebarGroupLabel>
-        <div className="flex items-center justify-center py-8">
-          <Loader2 className="text-muted-foreground h-6 w-6 animate-spin" />
-        </div>
-      </SidebarGroup>
-    );
-  }
+  const sectionTitle = isNeuroplasticity ? "Neuroscience" : "My Notes";
+  const toggleAriaLabel = sectionOpen
+    ? `Hide ${sectionTitle}`
+    : `Show ${sectionTitle}`;
 
   return (
     <SidebarGroup>
-      <SidebarGroupLabel>
-        {isNeuroplasticity ? "Neuroscience" : "My Notes"}
-        {isGuest && (
-          <Badge variant="secondary" className="ml-2 text-xs">
-            Guest
-          </Badge>
-        )}
-      </SidebarGroupLabel>
-
-      {displayNotes.length === 0 ? (
-        <div className="px-3 py-8 text-center">
-          <Image
-            src="/otium_gray.png"
-            alt="Otium Logo"
-            width={150}
-            height={150}
-            className="mx-auto opacity-30"
-          />
-          <p className="text-muted-foreground mt-2 text-sm">
-            {isGuest
-              ? "No notes yet. Start writing to see them here!"
-              : "No notes yet. Create your first note!"}
-          </p>
-        </div>
-      ) : (
-        <SidebarMenu>
-          {displayNotes.map((note) => (
-            <SidebarMenuItem key={note.id} className="group/item relative">
-              <SidebarMenuButton
-                isActive={currentNoteId === note.id}
-                onClick={() => handleNoteClick(note.id)}
-                className="pr-10"
-              >
-                <div className="flex min-w-0 flex-1 flex-col overflow-hidden">
-                  <div className="truncate text-sm font-medium">
-                    {getNoteTitle(note)}
-                  </div>
-                  <div className="text-muted-foreground text-xs">
-                    {formatNoteDate(note.createdAt)}
-                  </div>
-                </div>
-              </SidebarMenuButton>
-
-              {user ? (
-                <>
-                  {"token" in note && note.token && !isNeuroplasticity && (
-                    <Tooltip>
-                      <TooltipTrigger asChild>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className="absolute top-1/2 right-10 h-7 w-7 -translate-y-1/2 p-0 opacity-0 group-hover/item:opacity-100"
-                          onClick={() =>
-                            handleCopyLink((note as UserNote).token)
-                          }
-                        >
-                          <Copy className="h-3 w-3" />
-                        </Button>
-                      </TooltipTrigger>
-                      <TooltipContent>Copy link</TooltipContent>
-                    </Tooltip>
-                  )}
-                  <NoteActions
-                    noteId={note.id}
-                    deleteNoteLocally={deleteNoteLocally}
-                    isNeuroscience={isNeuroplasticity}
-                  />
-                </>
-              ) : (
-                <NoteActions
-                  noteId={note.id}
-                  deleteNoteLocally={deleteNoteLocally}
-                  isGuest={true}
-                  onGuestDelete={() => deleteGuestNote(note.id)}
-                  isNeuroscience={isNeuroplasticity}
-                />
+      <Collapsible open={sectionOpen} onOpenChange={handleSectionOpenChange}>
+        <SidebarGroupLabel asChild>
+          <CollapsibleTrigger
+            type="button"
+            aria-expanded={sectionOpen}
+            aria-label={toggleAriaLabel}
+            className={cn(
+              "hover:bg-sidebar-accent/60 hover:text-sidebar-accent-foreground w-full cursor-pointer gap-2 pr-2 text-left",
+            )}
+          >
+            <ChevronRight
+              className={cn(
+                "shrink-0 transition-transform duration-200",
+                sectionOpen && "rotate-90",
               )}
-            </SidebarMenuItem>
-          ))}
-        </SidebarMenu>
-      )}
+              aria-hidden
+            />
+            <span className="flex min-w-0 flex-1 items-center gap-2">
+              <span className="truncate">{sectionTitle}</span>
+              {isGuest && (
+                <Badge variant="secondary" className="text-xs normal-case">
+                  Guest
+                </Badge>
+              )}
+            </span>
+          </CollapsibleTrigger>
+        </SidebarGroupLabel>
 
-      {isGuest && displayNotes.length > 0 && (
-        <div className="mt-4 px-3">
-          <p className="text-muted-foreground text-xs">
-            <Button
-              variant="link"
-              size="sm"
-              className="h-auto p-0 text-xs"
-              onClick={() => router.push("/login")}
-            >
-              Log in
-            </Button>
-            {" or "}
-            <Button
-              variant="link"
-              size="sm"
-              className="h-auto p-0 text-xs"
-              onClick={() => router.push("/sign-up")}
-            >
-              sign up
-            </Button>
-            {" to save your notes"}
-          </p>
-        </div>
-      )}
+        <CollapsibleContent>
+          {loading ? (
+            <div className="flex items-center justify-center py-8">
+              <Loader2 className="text-muted-foreground h-6 w-6 animate-spin" />
+            </div>
+          ) : displayNotes.length === 0 ? (
+            <div className="px-3 py-8 text-center">
+              <Image
+                src="/otium_gray.png"
+                alt="Otium Logo"
+                width={150}
+                height={150}
+                className="mx-auto opacity-30"
+              />
+              <p className="text-muted-foreground mt-2 text-sm">
+                {isGuest
+                  ? "No notes yet. Start writing to see them here!"
+                  : "No notes yet. Create your first note!"}
+              </p>
+            </div>
+          ) : (
+            <SidebarMenu>
+              {displayNotes.map((note) => (
+                <SidebarMenuItem key={note.id} className="group/item relative">
+                  <SidebarMenuButton
+                    isActive={currentNoteId === note.id}
+                    onClick={() => handleNoteClick(note.id)}
+                    className="pr-10"
+                  >
+                    <span className="truncate text-sm font-medium">
+                      {getNoteTitle(note)}
+                    </span>
+                  </SidebarMenuButton>
+
+                  {user ? (
+                    <>
+                      {"token" in note && note.token && !isNeuroplasticity && (
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="absolute top-1/2 right-10 h-7 w-7 -translate-y-1/2 p-0 opacity-0 group-hover/item:opacity-100"
+                              onClick={() =>
+                                handleCopyLink((note as UserNote).token)
+                              }
+                            >
+                              <Copy className="h-3 w-3" />
+                            </Button>
+                          </TooltipTrigger>
+                          <TooltipContent>Copy link</TooltipContent>
+                        </Tooltip>
+                      )}
+                      <NoteActions
+                        noteId={note.id}
+                        deleteNoteLocally={deleteNoteLocally}
+                        isNeuroscience={isNeuroplasticity}
+                      />
+                    </>
+                  ) : (
+                    <NoteActions
+                      noteId={note.id}
+                      deleteNoteLocally={deleteNoteLocally}
+                      isGuest={true}
+                      onGuestDelete={() => deleteGuestNote(note.id)}
+                      isNeuroscience={isNeuroplasticity}
+                    />
+                  )}
+                </SidebarMenuItem>
+              ))}
+            </SidebarMenu>
+          )}
+
+          {!loading && isGuest && displayNotes.length > 0 && (
+            <div className="mt-4 px-3">
+              <p className="text-muted-foreground text-xs">
+                <Button
+                  variant="link"
+                  size="sm"
+                  className="h-auto p-0 text-xs"
+                  onClick={() => router.push("/login")}
+                >
+                  Log in
+                </Button>
+                {" or "}
+                <Button
+                  variant="link"
+                  size="sm"
+                  className="h-auto p-0 text-xs"
+                  onClick={() => router.push("/sign-up")}
+                >
+                  sign up
+                </Button>
+                {" to save your notes"}
+              </p>
+            </div>
+          )}
+        </CollapsibleContent>
+      </Collapsible>
     </SidebarGroup>
   );
 }

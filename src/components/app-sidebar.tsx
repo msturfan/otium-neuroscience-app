@@ -5,7 +5,7 @@ import Image from "next/image";
 import {
   Brain,
   Calendar,
-  Command,
+  Dumbbell,
   Edit,
   Inbox,
   MessageCircleQuestion,
@@ -71,8 +71,8 @@ const data = {
       isActive: true,
     },
     {
-      name: "Coming Soon...",
-      logo: Command,
+      name: "Workout",
+      logo: Dumbbell,
       plan: "Free",
     },
   ],
