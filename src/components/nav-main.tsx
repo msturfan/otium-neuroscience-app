@@ -48,9 +48,14 @@ export function NavMain({
     }
   };
 
+  const isNeuroplasticity = pathname.startsWith("/neuroplasticity");
+  const navItems = isNeuroplasticity
+    ? items.filter((item) => item.url !== "/inbox")
+    : items;
+
   return (
     <SidebarMenu>
-      {items.map((item) => (
+      {navItems.map((item) => (
         <SidebarMenuItem key={item.title}>
           <SidebarMenuButton asChild isActive={isItemActive(item.url)}>
             {item.title === "New note" ? (

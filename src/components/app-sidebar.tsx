@@ -9,7 +9,6 @@ import {
   Edit,
   Inbox,
   MessageCircleQuestion,
-  Sparkles,
   Landmark,
   HeartHandshake,
 } from "lucide-react";
@@ -77,11 +76,6 @@ const data = {
     },
   ],
   navMain: [
-    {
-      title: "Ask AI",
-      url: "#",
-      icon: Sparkles,
-    },
     {
       title: "New note",
       url: "/",
