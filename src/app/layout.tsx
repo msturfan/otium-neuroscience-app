@@ -3,6 +3,7 @@ import "@/styles/globals.css";
 import { ThemeProvider } from "@/providers/ThemeProvider";
 import { Toaster } from "@/components/ui/sonner";
 import NoteProvider from "@/providers/NoteProvider";
+import { KnownNoteIdsProvider } from "@/providers/KnownNoteIdsProvider";
 import { AppSidebar } from "@/components/app-sidebar";
 import { NavActions } from "@/components/nav-actions";
 import { DateDisplay } from "@/components/DateDisplay";
@@ -41,27 +42,29 @@ export default async function RootLayout({
           disableTransitionOnChange
         >
           <NoteProvider>
-            <SidebarProvider>
-              <AppSidebar user={user} userProfile={userProfile} />
-              <SidebarInset>
-                <header className="flex h-14 shrink-0 items-center justify-between">
-                  <div className="flex items-center gap-2 px-3">
-                    <SidebarTrigger />
-                    <Separator
-                      orientation="vertical"
-                      className="mx-2 data-[orientation=vertical]:h-4"
-                    />
-                    <DateDisplay />
+            <KnownNoteIdsProvider>
+              <SidebarProvider>
+                <AppSidebar user={user} userProfile={userProfile} />
+                <SidebarInset>
+                  <header className="flex h-14 shrink-0 items-center justify-between">
+                    <div className="flex items-center gap-2 px-3">
+                      <SidebarTrigger />
+                      <Separator
+                        orientation="vertical"
+                        className="mx-2 data-[orientation=vertical]:h-4"
+                      />
+                      <DateDisplay />
+                    </div>
+                    <div className="px-3">
+                      <NavActions user={user} />
+                    </div>
+                  </header>
+                  <div className="flex flex-1 flex-col gap-4 px-4 py-10">
+                    {children}
                   </div>
-                  <div className="px-3">
-                    <NavActions user={user} />
-                  </div>
-                </header>
-                <div className="flex flex-1 flex-col gap-4 px-4 py-10">
-                  {children}
-                </div>
-              </SidebarInset>
-            </SidebarProvider>
+                </SidebarInset>
+              </SidebarProvider>
+            </KnownNoteIdsProvider>
 
             <Toaster />
           </NoteProvider>

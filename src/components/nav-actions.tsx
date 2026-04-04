@@ -39,8 +39,13 @@ import {
 } from "@/hooks/usePinnedChats";
 import { deleteNoteAction } from "@/actions/notes";
 import { deleteNeuroscienceAction } from "@/actions/neuroscience";
+import { shouldHideComposerOverflowMenu } from "@/lib/note-nav";
+import { useKnownNoteIds } from "@/providers/KnownNoteIdsProvider";
 
 export const NOTE_DELETED_EVENT = "otium:note-deleted";
+
+/** Fired after a note is persisted so the sidebar can refresh `knownNoteIds` (header menu visibility). */
+export const NOTE_PERSISTED_EVENT = "otium:note-persisted";
 
 const data = [
   [
@@ -77,6 +82,10 @@ export function NavActions({ user }: { user: User | null }) {
   const pathname = usePathname();
   const searchParams = useSearchParams();
   const noteId = searchParams.get("noteId");
+  const { knownNoteIds } = useKnownNoteIds();
+  const hideComposerOverflowMenu =
+    user != null &&
+    shouldHideComposerOverflowMenu(pathname, noteId, knownNoteIds);
 
   const isNotesContext =
     pathname === "/" || pathname.startsWith("/neuroplasticity");
@@ -193,94 +202,105 @@ export function NavActions({ user }: { user: User | null }) {
       {user ? (
         <>
           <DarkModeToggle />
-          <Popover open={isOpen} onOpenChange={setIsOpen}>
-            <PopoverTrigger asChild>
-              <Button
-                variant="ghost"
-                size="icon"
-                className="data-[state=open]:bg-accent h-7 w-7"
-              >
-                <MoreHorizontal />
-              </Button>
-            </PopoverTrigger>
-            <PopoverContent
-              className="w-56 overflow-hidden rounded-lg p-0"
-              align="end"
-            >
-              <Sidebar collapsible="none" className="bg-transparent">
-                <SidebarContent>
-                  {data.map((group, index) => (
-                    <SidebarGroup
-                      key={index}
-                      className="border-b last:border-none"
-                    >
-                      <SidebarGroupContent className="gap-0">
-                        <SidebarMenu>
-                          {group.map((item, itemIndex) => {
-                            const pinLabel =
-                              noteId && isPinned(noteId)
-                                ? "Unpin chat"
-                                : "Pin chat";
-                            const displayLabel =
-                              "pinAction" in item && item.pinAction
-                                ? pinLabel
-                                : item.label;
-
-                            return (
-                              <SidebarMenuItem key={itemIndex}>
-                                <SidebarMenuButton
-                                  onClick={
-                                    "deleteAction" in item && item.deleteAction
-                                      ? handleDeleteMenuClick
-                                      : item.label === "Copy Link"
-                                        ? handleCopyLink
-                                        : "pinAction" in item && item.pinAction
-                                          ? handlePinChat
-                                          : undefined
-                                  }
-                                >
-                                  <item.icon /> <span>{displayLabel}</span>
-                                </SidebarMenuButton>
-                              </SidebarMenuItem>
-                            );
-                          })}
-                        </SidebarMenu>
-                      </SidebarGroupContent>
-                    </SidebarGroup>
-                  ))}
-                </SidebarContent>
-              </Sidebar>
-            </PopoverContent>
-          </Popover>
-
-          <Dialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
-            <DialogContent>
-              <DialogHeader>
-                <DialogTitle>Delete this chat?</DialogTitle>
-                <DialogDescription>
-                  This cannot be undone. The note will be permanently removed.
-                </DialogDescription>
-              </DialogHeader>
-              <DialogFooter>
-                <DialogClose asChild>
-                  <Button variant="outline" disabled={isPending}>
-                    Cancel
+          {!hideComposerOverflowMenu && (
+            <>
+              <Popover open={isOpen} onOpenChange={setIsOpen}>
+                <PopoverTrigger asChild>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="data-[state=open]:bg-accent h-7 w-7"
+                  >
+                    <MoreHorizontal />
                   </Button>
-                </DialogClose>
-                <Button
-                  variant="destructive"
-                  disabled={isPending}
-                  onClick={handleConfirmDeleteChat}
+                </PopoverTrigger>
+                <PopoverContent
+                  className="w-56 overflow-hidden rounded-lg p-0"
+                  align="end"
                 >
-                  {isPending ? (
-                    <Loader2 className="size-4 animate-spin" />
-                  ) : (
-                    "Delete"
-                  )}
-                </Button>
-              </DialogFooter>
-            </DialogContent>
-          </Dialog>
+                  <Sidebar collapsible="none" className="bg-transparent">
+                    <SidebarContent>
+                      {data.map((group, index) => (
+                        <SidebarGroup
+                          key={index}
+                          className="border-b last:border-none"
+                        >
+                          <SidebarGroupContent className="gap-0">
+                            <SidebarMenu>
+                              {group.map((item, itemIndex) => {
+                                const pinLabel =
+                                  noteId && isPinned(noteId)
+                                    ? "Unpin chat"
+                                    : "Pin chat";
+                                const displayLabel =
+                                  "pinAction" in item && item.pinAction
+                                    ? pinLabel
+                                    : item.label;
+
+                                return (
+                                  <SidebarMenuItem key={itemIndex}>
+                                    <SidebarMenuButton
+                                      onClick={
+                                        "deleteAction" in item &&
+                                        item.deleteAction
+                                          ? handleDeleteMenuClick
+                                          : item.label === "Copy Link"
+                                            ? handleCopyLink
+                                            : "pinAction" in item &&
+                                                item.pinAction
+                                              ? handlePinChat
+                                              : undefined
+                                      }
+                                    >
+                                      <item.icon />{" "}
+                                      <span>{displayLabel}</span>
+                                    </SidebarMenuButton>
+                                  </SidebarMenuItem>
+                                );
+                              })}
+                            </SidebarMenu>
+                          </SidebarGroupContent>
+                        </SidebarGroup>
+                      ))}
+                    </SidebarContent>
+                  </Sidebar>
+                </PopoverContent>
+              </Popover>
+
+              <Dialog
+                open={isDeleteDialogOpen}
+                onOpenChange={setIsDeleteDialogOpen}
+              >
+                <DialogContent>
+                  <DialogHeader>
+                    <DialogTitle>Delete this chat?</DialogTitle>
+                    <DialogDescription>
+                      This cannot be undone. The note will be permanently
+                      removed.
+                    </DialogDescription>
+                  </DialogHeader>
+                  <DialogFooter>
+                    <DialogClose asChild>
+                      <Button variant="outline" disabled={isPending}>
+                        Cancel
+                      </Button>
+                    </DialogClose>
+                    <Button
+                      variant="destructive"
+                      disabled={isPending}
+                      onClick={handleConfirmDeleteChat}
+                    >
+                      {isPending ? (
+                        <Loader2 className="size-4 animate-spin" />
+                      ) : (
+                        "Delete"
+                      )}
+                    </Button>
+                  </DialogFooter>
+                </DialogContent>
+              </Dialog>
+            </>
+          )}
         </>
       ) : (
         <>

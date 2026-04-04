@@ -8,20 +8,7 @@ import {
   SidebarMenuButton,
   SidebarMenuItem,
 } from "@/components/ui/sidebar";
-
-/** "New note" lives on `/` or `/neuroplasticity` with optional `noteId`; pathname alone is not enough. */
-function isNewNoteNavActive(
-  pathname: string,
-  noteId: string | null,
-  knownNoteIds: Set<string> | null,
-): boolean {
-  const onNoteComposer =
-    pathname === "/" || pathname.startsWith("/neuroplasticity");
-  if (!onNoteComposer) return false;
-  if (!noteId) return true;
-  if (knownNoteIds === null) return false;
-  return !knownNoteIds.has(noteId);
-}
+import { isNewNoteNavActive } from "@/lib/note-nav";
 
 export function NavMain({
   items,

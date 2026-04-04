@@ -27,6 +27,7 @@ import {
   SidebarRail,
 } from "@/components/ui/sidebar";
 import { User } from "@supabase/supabase-js";
+import { useKnownNoteIds } from "@/providers/KnownNoteIdsProvider";
 
 // Custom logo component for Otium
 const OtiumLogo = ({ className }: { className?: string }) => (
@@ -136,9 +137,7 @@ export function AppSidebar({
         (item) => item.title !== "Calendar" && item.title !== "Settings"
       );
 
-  const [knownNoteIds, setKnownNoteIds] = React.useState<Set<string> | null>(
-    null,
-  );
+  const { knownNoteIds, setKnownNoteIds } = useKnownNoteIds();
 
   return (
     <Sidebar className="border-r-0" {...props}>
