@@ -26,11 +26,15 @@ import {
 } from "@/components/ui/tooltip";
 import { fetchUserNotesAction } from "@/actions/notes";
 import { fetchUserNeuroscienceAction } from "@/actions/neuroscience";
+import { fetchUserWorkoutAction } from "@/actions/workout";
 import { Badge } from "@/components/ui/badge";
 import useNote from "@/hooks/useNote";
 import NoteActions from "./NoteActions";
 import { User } from "@supabase/supabase-js";
-import { usePinnedChats } from "@/hooks/usePinnedChats";
+import {
+  usePinnedChats,
+  type PinnedChatContext,
+} from "@/hooks/usePinnedChats";
 import {
   NOTE_DELETED_EVENT,
   NOTE_PERSISTED_EVENT,
@@ -51,6 +55,7 @@ type Props = {
 
 const SIDEBAR_NOTES_EXPANDED_KEY = "otium.sidebar.myNotesExpanded";
 const SIDEBAR_NEUROSCIENCE_EXPANDED_KEY = "otium.sidebar.neuroscienceExpanded";
+const SIDEBAR_WORKOUT_EXPANDED_KEY = "otium.sidebar.workoutExpanded";
 
 export function NavNotes({ user, onKnownNoteIdsChange }: Props) {
   const router = useRouter();
@@ -59,10 +64,19 @@ export function NavNotes({ user, onKnownNoteIdsChange }: Props) {
   const currentNoteId = searchParams.get("noteId");
   
   const isNeuroplasticity = pathname.startsWith("/neuroplasticity");
+  const isWorkout = pathname.startsWith("/workout");
 
   const expandedStorageKey = isNeuroplasticity
     ? SIDEBAR_NEUROSCIENCE_EXPANDED_KEY
-    : SIDEBAR_NOTES_EXPANDED_KEY;
+    : isWorkout
+      ? SIDEBAR_WORKOUT_EXPANDED_KEY
+      : SIDEBAR_NOTES_EXPANDED_KEY;
+
+  const pinnedContext: PinnedChatContext = isNeuroplasticity
+    ? "neuroscience"
+    : isWorkout
+      ? "workout"
+      : "otium";
 
   const [sectionOpen, setSectionOpen] = useState(true);
   const [userNotes, setUserNotes] = useState<UserNote[]>([]);
@@ -92,9 +106,11 @@ export function NavNotes({ user, onKnownNoteIdsChange }: Props) {
     const fetchNotes = async () => {
       if (user) {
         setLoading(true);
-        const { notes, errorMessage } = isNeuroplasticity 
+        const { notes, errorMessage } = isNeuroplasticity
           ? await fetchUserNeuroscienceAction()
-          : await fetchUserNotesAction();
+          : isWorkout
+            ? await fetchUserWorkoutAction()
+            : await fetchUserNotesAction();
         if (!errorMessage) {
           setUserNotes(notes);
         } else {
@@ -108,7 +124,7 @@ export function NavNotes({ user, onKnownNoteIdsChange }: Props) {
     };
 
     fetchNotes();
-  }, [user, isNeuroplasticity]);
+  }, [user, isNeuroplasticity, isWorkout]);
 
   useEffect(() => {
     const onNoteDeleted = (e: Event) => {
@@ -127,7 +143,9 @@ export function NavNotes({ user, onKnownNoteIdsChange }: Props) {
       void (async () => {
         const { notes, errorMessage } = isNeuroplasticity
           ? await fetchUserNeuroscienceAction()
-          : await fetchUserNotesAction();
+          : isWorkout
+            ? await fetchUserWorkoutAction()
+            : await fetchUserNotesAction();
         if (!errorMessage) {
           setUserNotes(notes);
         }
@@ -135,10 +153,14 @@ export function NavNotes({ user, onKnownNoteIdsChange }: Props) {
     };
     window.addEventListener(NOTE_PERSISTED_EVENT, onPersisted);
     return () => window.removeEventListener(NOTE_PERSISTED_EVENT, onPersisted);
-  }, [user, isNeuroplasticity]);
+  }, [user, isNeuroplasticity, isWorkout]);
 
   const handleNoteClick = (noteId: string) => {
-    const basePath = isNeuroplasticity ? "/neuroplasticity" : "/";
+    const basePath = isNeuroplasticity
+      ? "/neuroplasticity"
+      : isWorkout
+        ? "/workout"
+        : "/";
     router.push(`${basePath}?noteId=${noteId}`);
   };
 
@@ -177,7 +199,7 @@ export function NavNotes({ user, onKnownNoteIdsChange }: Props) {
   const displayNotes = user ? userNotes : guestNotes;
   const isGuest = !user;
 
-  const { pinnedIds } = usePinnedChats(isNeuroplasticity);
+  const { pinnedIds } = usePinnedChats(pinnedContext);
 
   useEffect(() => {
     if (!onKnownNoteIdsChange) return;
@@ -197,7 +219,13 @@ export function NavNotes({ user, onKnownNoteIdsChange }: Props) {
     return [...pinnedOrdered, ...unpinned];
   }, [displayNotes, pinnedIds]);
 
-  const sectionTitle = isNeuroplasticity ? "Neuroscience" : "My Notes";
+  const sectionTitle = isNeuroplasticity
+    ? "Neuroscience"
+    : isWorkout
+      ? "Workout"
+      : "My Notes";
+
+  const showPublicCopyLink = user && !isNeuroplasticity && !isWorkout;
   const toggleAriaLabel = sectionOpen
     ? `Hide ${sectionTitle}`
     : `Show ${sectionTitle}`;
@@ -280,7 +308,7 @@ export function NavNotes({ user, onKnownNoteIdsChange }: Props) {
 
                   {user ? (
                     <>
-                      {"token" in note && note.token && !isNeuroplasticity && (
+                      {"token" in note && note.token && showPublicCopyLink && (
                         <Tooltip>
                           <TooltipTrigger asChild>
                             <Button
@@ -300,7 +328,13 @@ export function NavNotes({ user, onKnownNoteIdsChange }: Props) {
                       <NoteActions
                         noteId={note.id}
                         deleteNoteLocally={deleteNoteLocally}
-                        isNeuroscience={isNeuroplasticity}
+                        composerKind={
+                          isNeuroplasticity
+                            ? "neuroscience"
+                            : isWorkout
+                              ? "workout"
+                              : "note"
+                        }
                       />
                     </>
                   ) : (
@@ -309,7 +343,13 @@ export function NavNotes({ user, onKnownNoteIdsChange }: Props) {
                       deleteNoteLocally={deleteNoteLocally}
                       isGuest={true}
                       onGuestDelete={() => deleteGuestNote(note.id)}
-                      isNeuroscience={isNeuroplasticity}
+                      composerKind={
+                        isNeuroplasticity
+                          ? "neuroscience"
+                          : isWorkout
+                            ? "workout"
+                            : "note"
+                      }
                     />
                   )}
                 </SidebarMenuItem>

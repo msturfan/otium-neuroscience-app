@@ -48,19 +48,18 @@ export function NavMain({
     e.preventDefault();
     const newId = crypto.randomUUID();
     
-    // If on neuroplasticity page, create new neuroplasticity note
     if (pathname.startsWith("/neuroplasticity")) {
       router.push(`/neuroplasticity?noteId=${newId}`);
+    } else if (pathname.startsWith("/workout")) {
+      router.push(`/workout?noteId=${newId}`);
     } else {
-      // Otherwise, create new regular note
       router.push(`/?noteId=${newId}`);
     }
   };
 
-  const isNeuroplasticity = pathname.startsWith("/neuroplasticity");
-  const navItems = isNeuroplasticity
-    ? items.filter((item) => item.url !== "/inbox")
-    : items;
+  const hideInbox =
+    pathname.startsWith("/neuroplasticity") || pathname.startsWith("/workout");
+  const navItems = hideInbox ? items.filter((item) => item.url !== "/inbox") : items;
 
   return (
     <SidebarMenu>

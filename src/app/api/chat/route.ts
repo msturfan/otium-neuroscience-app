@@ -1,6 +1,7 @@
 import { NextRequest } from "next/server";
 import { NEUROSCIENCE_SYSTEM_PROMPT } from "@/lib/neuroscience-system-prompt";
 import { OTIUM_SYSTEM_PROMPT } from "@/lib/otium-system-prompt";
+import { WORKOUT_SYSTEM_PROMPT } from "@/lib/workout-system-prompt";
 import { groqChatStream } from "@/lib/groq";
 
 export const runtime = "nodejs";
@@ -9,8 +10,12 @@ export async function POST(req: NextRequest) {
   try {
     const { messages, promptType } = await req.json();
 
-    // Use appropriate system prompt based on promptType (default to neuroscience for backward compatibility)
-    const systemPrompt = promptType === "otium" ? OTIUM_SYSTEM_PROMPT : NEUROSCIENCE_SYSTEM_PROMPT;
+    const systemPrompt =
+      promptType === "otium"
+        ? OTIUM_SYSTEM_PROMPT
+        : promptType === "workout"
+          ? WORKOUT_SYSTEM_PROMPT
+          : NEUROSCIENCE_SYSTEM_PROMPT;
 
     // Filter to only user/assistant messages for Gemini history
     const chatMessages = messages.filter(

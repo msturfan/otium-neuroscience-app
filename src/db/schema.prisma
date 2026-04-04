@@ -74,6 +74,7 @@ model User {
   dob           DateTime?
   timezone      String?            @default("UTC")
   Neuroscience  Neuroscience[]
+  workouts      Workout[]
   notes         Note[]
   streakHistory UserStreakHistory?
   weeklyReports WeeklyReport[]
@@ -119,6 +120,17 @@ model Neuroscience {
   id        String   @id
   text      String
   token     String   @unique(map: "Neuroscience_token_idx")
+  authorId  String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @default(now()) @updatedAt
+  title     String?
+  User      User     @relation(fields: [authorId], references: [id], onDelete: Cascade)
+}
+
+model Workout {
+  id        String   @id
+  text      String
+  token     String   @unique(map: "Workout_token_idx")
   authorId  String
   createdAt DateTime @default(now())
   updatedAt DateTime @default(now()) @updatedAt

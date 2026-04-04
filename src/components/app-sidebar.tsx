@@ -46,6 +46,10 @@ export const NeuroplasticityLogo = ({ className }: { className?: string }) => (
   <Brain className={className} />
 );
 
+export const WorkoutLogo = ({ className }: { className?: string }) => (
+  <Dumbbell className={className} />
+);
+
 type UserProfile = {
   name: string;
   email: string;
@@ -72,8 +76,10 @@ const data = {
     },
     {
       name: "Workout",
-      logo: Dumbbell,
+      logo: WorkoutLogo,
       plan: "Free",
+      url: "/workout",
+      isActive: true,
     },
   ],
   navMain: [

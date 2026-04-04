@@ -8,7 +8,9 @@ export function isNewNoteNavActive(
   knownNoteIds: Set<string> | null,
 ): boolean {
   const onNoteComposer =
-    pathname === "/" || pathname.startsWith("/neuroplasticity");
+    pathname === "/" ||
+    pathname.startsWith("/neuroplasticity") ||
+    pathname.startsWith("/workout");
   if (!onNoteComposer) return false;
   if (!noteId) return true;
   if (knownNoteIds === null) return false;
@@ -26,7 +28,9 @@ export function shouldHideComposerOverflowMenu(
   knownNoteIds: Set<string> | null,
 ): boolean {
   const onNoteComposer =
-    pathname === "/" || pathname.startsWith("/neuroplasticity");
+    pathname === "/" ||
+    pathname.startsWith("/neuroplasticity") ||
+    pathname.startsWith("/workout");
   if (!onNoteComposer) return false;
   if (!noteId) return true;
   if (knownNoteIds === null) return true;

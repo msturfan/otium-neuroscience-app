@@ -23,15 +23,18 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { toast } from "sonner";
 import { deleteNoteAction } from "@/actions/notes";
 import { deleteNeuroscienceAction } from "@/actions/neuroscience";
+import { deleteWorkoutAction } from "@/actions/workout";
 import React from "react";
 import { usePinnedChats } from "@/hooks/usePinnedChats";
+
+export type NoteComposerKind = "note" | "neuroscience" | "workout";
 
 type Props = {
   noteId: string;
   deleteNoteLocally: (noteId: string) => void;
   isGuest?: boolean;
   onGuestDelete?: () => void;
-  isNeuroscience?: boolean;
+  composerKind?: NoteComposerKind;
 };
 
 function NoteActions({
@@ -39,7 +42,7 @@ function NoteActions({
   deleteNoteLocally,
   isGuest = false,
   onGuestDelete,
-  isNeuroscience = false,
+  composerKind = "note",
 }: Props) {
   const router = useRouter();
   const noteIdParam = useSearchParams().get("noteId") || "";
@@ -49,7 +52,13 @@ function NoteActions({
   const deleteRef = React.useRef<HTMLButtonElement>(null);
   const cancelRef = React.useRef<HTMLButtonElement>(null);
 
-  const { togglePin, isPinned } = usePinnedChats(isNeuroscience);
+  const pinnedContext =
+    composerKind === "neuroscience"
+      ? "neuroscience"
+      : composerKind === "workout"
+        ? "workout"
+        : "otium";
+  const { togglePin, isPinned } = usePinnedChats(pinnedContext);
 
   const handleTogglePin = () => {
     const wasPinned = isPinned(noteId);
@@ -61,8 +70,18 @@ function NoteActions({
     });
   };
 
-  const deleteAction = isNeuroscience ? deleteNeuroscienceAction : deleteNoteAction;
-  const redirectPath = isNeuroscience ? "/neuroplasticity" : "/";
+  const deleteAction =
+    composerKind === "neuroscience"
+      ? deleteNeuroscienceAction
+      : composerKind === "workout"
+        ? deleteWorkoutAction
+        : deleteNoteAction;
+  const redirectPath =
+    composerKind === "neuroscience"
+      ? "/neuroplasticity"
+      : composerKind === "workout"
+        ? "/workout"
+        : "/";
 
   const handleDeleteNote = () => {
     if (isGuest && onGuestDelete) {

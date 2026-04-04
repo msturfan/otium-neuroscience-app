@@ -4,17 +4,22 @@ import { useCallback, useEffect, useState } from "react";
 
 export const PINNED_CHATS_CHANGED_EVENT = "otium-pinned-chats-changed";
 
+export type PinnedChatContext = "otium" | "neuroscience" | "workout";
+
 const KEY_OTIUM = "otium.pinnedNoteIds";
 const KEY_NEURO = "otium.pinnedNeuroscienceNoteIds";
+const KEY_WORKOUT = "otium.pinnedWorkoutNoteIds";
 
-function storageKey(isNeuroscience: boolean) {
-  return isNeuroscience ? KEY_NEURO : KEY_OTIUM;
+function storageKey(context: PinnedChatContext) {
+  if (context === "neuroscience") return KEY_NEURO;
+  if (context === "workout") return KEY_WORKOUT;
+  return KEY_OTIUM;
 }
 
-export function readPinnedIds(isNeuroscience: boolean): string[] {
+export function readPinnedIds(context: PinnedChatContext): string[] {
   if (typeof window === "undefined") return [];
   try {
-    const raw = localStorage.getItem(storageKey(isNeuroscience));
+    const raw = localStorage.getItem(storageKey(context));
     if (!raw) return [];
     const parsed = JSON.parse(raw) as unknown;
     return Array.isArray(parsed)
@@ -25,35 +30,35 @@ export function readPinnedIds(isNeuroscience: boolean): string[] {
   }
 }
 
-export function writePinnedIds(isNeuroscience: boolean, ids: string[]) {
+export function writePinnedIds(context: PinnedChatContext, ids: string[]) {
   if (typeof window === "undefined") return;
-  localStorage.setItem(storageKey(isNeuroscience), JSON.stringify(ids));
+  localStorage.setItem(storageKey(context), JSON.stringify(ids));
   window.dispatchEvent(new CustomEvent(PINNED_CHATS_CHANGED_EVENT));
 }
 
-export function usePinnedChats(isNeuroscience: boolean) {
+export function usePinnedChats(context: PinnedChatContext) {
   const [pinnedIds, setPinnedIds] = useState<string[]>([]);
 
   useEffect(() => {
-    setPinnedIds(readPinnedIds(isNeuroscience));
-  }, [isNeuroscience]);
+    setPinnedIds(readPinnedIds(context));
+  }, [context]);
 
   useEffect(() => {
-    const sync = () => setPinnedIds(readPinnedIds(isNeuroscience));
+    const sync = () => setPinnedIds(readPinnedIds(context));
     window.addEventListener(PINNED_CHATS_CHANGED_EVENT, sync);
     return () => window.removeEventListener(PINNED_CHATS_CHANGED_EVENT, sync);
-  }, [isNeuroscience]);
+  }, [context]);
 
   const togglePin = useCallback(
     (noteId: string) => {
-      const current = readPinnedIds(isNeuroscience);
+      const current = readPinnedIds(context);
       const idx = current.indexOf(noteId);
       const next =
         idx === -1 ? [noteId, ...current] : current.filter((id) => id !== noteId);
-      writePinnedIds(isNeuroscience, next);
+      writePinnedIds(context, next);
       setPinnedIds(next);
     },
-    [isNeuroscience],
+    [context],
   );
 
   const isPinned = useCallback(

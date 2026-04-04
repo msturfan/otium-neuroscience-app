@@ -36,9 +36,11 @@ import {
   readPinnedIds,
   usePinnedChats,
   writePinnedIds,
+  type PinnedChatContext,
 } from "@/hooks/usePinnedChats";
 import { deleteNoteAction } from "@/actions/notes";
 import { deleteNeuroscienceAction } from "@/actions/neuroscience";
+import { deleteWorkoutAction } from "@/actions/workout";
 import { shouldHideComposerOverflowMenu } from "@/lib/note-nav";
 import { useKnownNoteIds } from "@/providers/KnownNoteIdsProvider";
 
@@ -88,9 +90,17 @@ export function NavActions({ user }: { user: User | null }) {
     shouldHideComposerOverflowMenu(pathname, noteId, knownNoteIds);
 
   const isNotesContext =
-    pathname === "/" || pathname.startsWith("/neuroplasticity");
-  const isNeuroscience = pathname.startsWith("/neuroplasticity");
-  const { togglePin, isPinned } = usePinnedChats(isNeuroscience);
+    pathname === "/" ||
+    pathname.startsWith("/neuroplasticity") ||
+    pathname.startsWith("/workout");
+  const pinnedContext: PinnedChatContext = pathname.startsWith(
+    "/neuroplasticity",
+  )
+    ? "neuroscience"
+    : pathname.startsWith("/workout")
+      ? "workout"
+      : "otium";
+  const { togglePin, isPinned } = usePinnedChats(pinnedContext);
 
   React.useEffect(() => {
     setIsOpen(false);
@@ -128,7 +138,8 @@ export function NavActions({ user }: { user: User | null }) {
     }
     if (!isNotesContext) {
       toast("Pin unavailable", {
-        description: "Pinning is only available on Otium or Neuroscience notes.",
+        description:
+          "Pinning is only available on Otium, Neuroscience, or Workout chats.",
       });
       return;
     }
@@ -151,7 +162,8 @@ export function NavActions({ user }: { user: User | null }) {
     }
     if (!isNotesContext) {
       toast("Delete unavailable", {
-        description: "Deleting a chat is only available on Otium or Neuroscience notes.",
+        description:
+          "Deleting a chat is only available on Otium, Neuroscience, or Workout.",
       });
       return;
     }
@@ -162,19 +174,27 @@ export function NavActions({ user }: { user: User | null }) {
   const handleConfirmDeleteChat = () => {
     if (!noteId) return;
     const id = noteId;
-    const redirectPath = isNeuroscience ? "/neuroplasticity" : "/";
-    const deleteAction = isNeuroscience
-      ? deleteNeuroscienceAction
-      : deleteNoteAction;
+    const redirectPath =
+      pinnedContext === "neuroscience"
+        ? "/neuroplasticity"
+        : pinnedContext === "workout"
+          ? "/workout"
+          : "/";
+    const deleteAction =
+      pinnedContext === "neuroscience"
+        ? deleteNeuroscienceAction
+        : pinnedContext === "workout"
+          ? deleteWorkoutAction
+          : deleteNoteAction;
 
     startTransition(async () => {
       const { errorMessage } = await deleteAction(id);
 
       if (!errorMessage) {
-        const current = readPinnedIds(isNeuroscience);
+        const current = readPinnedIds(pinnedContext);
         if (current.includes(id)) {
           writePinnedIds(
-            isNeuroscience,
+            pinnedContext,
             current.filter((x) => x !== id),
           );
         }
