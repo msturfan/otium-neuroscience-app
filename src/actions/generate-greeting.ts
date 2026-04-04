@@ -1,6 +1,6 @@
 "use server";
 
-import { geminiChat } from "@/lib/gemini";
+import { groqChat } from "@/lib/groq";
 
 /**
  * Generates a concise greeting/confirmation message when a note is saved
@@ -53,7 +53,7 @@ Important:
     const systemPrompt =
       "You generate warm, friendly confirmation messages when a user saves a note. Be concise and natural.";
 
-    const rawGreeting = await geminiChat(systemPrompt, prompt);
+    const rawGreeting = await groqChat(systemPrompt, prompt);
 
     if (!rawGreeting) {
       return null;
@@ -68,7 +68,7 @@ Important:
 
     return cleanGreeting || null;
   } catch (error) {
-    console.error("[Gemini Error] generating greeting:", error);
+    console.error("[Groq Error] generating greeting:", error);
     return null;
   }
 }

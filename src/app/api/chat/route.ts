@@ -1,7 +1,7 @@
 import { NextRequest } from "next/server";
 import { NEUROSCIENCE_SYSTEM_PROMPT } from "@/lib/neuroscience-system-prompt";
 import { OTIUM_SYSTEM_PROMPT } from "@/lib/otium-system-prompt";
-import { geminiChatStream } from "@/lib/gemini";
+import { groqChatStream } from "@/lib/groq";
 
 export const runtime = "nodejs";
 
@@ -17,7 +17,7 @@ export async function POST(req: NextRequest) {
       (m: { role: string }) => m.role === "user" || m.role === "assistant",
     );
 
-    const stream = await geminiChatStream(systemPrompt, chatMessages);
+    const stream = await groqChatStream(systemPrompt, chatMessages);
 
     return new Response(stream, {
       headers: {
@@ -27,7 +27,7 @@ export async function POST(req: NextRequest) {
       },
     });
   } catch (error) {
-    console.error("[Gemini Error] Chat API:", error);
+    console.error("[Groq Error] Chat API:", error);
     return new Response(
       JSON.stringify({ error: "AI request failed. Please try again." }),
       { status: 500, headers: { "Content-Type": "application/json" } },
