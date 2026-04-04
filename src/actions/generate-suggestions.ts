@@ -1,5 +1,7 @@
 "use server";
 
+import { geminiChat } from "@/lib/gemini";
+
 export async function generateNoteSuggestions(
   noteText: string,
 ): Promise<{ suggestions: string[]; errorMessage: string | null }> {
@@ -40,47 +42,12 @@ ${cleanText}
 
 Suggestions:`;
 
-    // Get configuration from environment (required, no fallbacks)
-    const ollamaUrl = process.env.OLLAMA_API_URL;
-    const model = process.env.OLLAMA_MODEL_SUGGESTIONS;
+    const systemPrompt =
+      "You review daily notes and provide short, actionable suggestions. Return only bullet points.";
 
-    if (!ollamaUrl || !model) {
-      console.error("Ollama configuration missing. Set OLLAMA_API_URL and OLLAMA_MODEL_SUGGESTIONS in .env.local");
-      return {
-        suggestions: [],
-        errorMessage: "AI service is not configured. Please contact support.",
-      };
-    }
+    const responseText = await geminiChat(systemPrompt, prompt);
 
-    // Call Ollama API
-    const response = await fetch(`${ollamaUrl}/api/generate`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        model: model,
-        prompt: prompt,
-        stream: false,
-        options: {
-          temperature: 0.6, // Balanced creativity
-          num_predict: 200, // Enough for 2-6 suggestions
-        },
-      }),
-    });
-
-    if (!response.ok) {
-      console.error("Ollama API error:", response.statusText);
-      return {
-        suggestions: [],
-        errorMessage: "Failed to generate suggestions. Please try again.",
-      };
-    }
-
-    const data = await response.json();
-    const responseText = data.response?.trim();
-
-    if (!responseText) {
+    if (!responseText?.trim()) {
       return {
         suggestions: [],
         errorMessage: "No suggestions generated. Please try again.",
@@ -125,7 +92,7 @@ Suggestions:`;
             !line.toLowerCase().includes("suggestion") &&
             !line.toLowerCase().includes("note:"),
         )
-        .slice(0, 6); // Max 6 suggestions
+        .slice(0, 6);
     }
 
     // Limit to 6 suggestions max
@@ -134,8 +101,8 @@ Suggestions:`;
     // Clean each suggestion
     suggestions = suggestions.map((s) =>
       s
-        .replace(/^[-•*]\s*/, "") // Remove bullet
-        .replace(/^\d+[.)]\s*/, "") // Remove number
+        .replace(/^[-•*]\s*/, "")
+        .replace(/^\d+[.)]\s*/, "")
         .trim(),
     );
 
@@ -154,7 +121,7 @@ Suggestions:`;
       errorMessage: null,
     };
   } catch (error) {
-    console.error("Error generating suggestions with Ollama:", error);
+    console.error("[Gemini Error] generating suggestions:", error);
     return {
       suggestions: [],
       errorMessage:
@@ -162,4 +129,3 @@ Suggestions:`;
     };
   }
 }
-

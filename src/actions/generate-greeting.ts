@@ -1,30 +1,15 @@
 "use server";
 
+import { geminiChat } from "@/lib/gemini";
+
 /**
  * Generates a concise greeting/confirmation message when a note is saved
- * Uses qwen2:1.5b model via Ollama
  */
 export async function generateNoteGreeting(
   noteText: string,
   userLocalHour?: number, // User's local hour (0-23) from client
 ): Promise<string | null> {
   try {
-    const ollamaUrl = process.env.OLLAMA_API_URL;
-    const model = process.env.OLLAMA_MODEL_GREETING || "qwen2:1.5b";
-
-    console.log("generateNoteGreeting called with:", {
-      ollamaUrl,
-      model,
-      noteTextLength: noteText.length,
-    });
-
-    if (!ollamaUrl) {
-      console.error(
-        "Ollama configuration missing. Set OLLAMA_API_URL in .env.local",
-      );
-      return null;
-    }
-
     // Get current time of day for context
     // Use user's local time if provided, otherwise fall back to server time
     const hour =
@@ -63,69 +48,27 @@ Important:
 - If the note contains multiple bullet points/ideas, pick a meaningful one (preferably not the very first item when possible).
 - Do not invent details that are not in the note.
 - Keep the response concise and friendly.
-- Use the same language as the user's note if possible.
 - Return only the greeting message, nothing else.`;
 
-    // Call Ollama API
-    console.log("Calling Ollama API:", `${ollamaUrl}/api/generate`);
-    const response = await fetch(`${ollamaUrl}/api/generate`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        model: model,
-        prompt: prompt,
-        stream: false,
-        options: {
-          temperature: 0.8, // Higher for more natural, varied greetings
-        },
-      }),
-    });
+    const systemPrompt =
+      "You generate warm, friendly confirmation messages when a user saves a note. Be concise and natural.";
 
-    console.log(
-      "Ollama API response status:",
-      response.status,
-      response.statusText,
-    );
+    const rawGreeting = await geminiChat(systemPrompt, prompt);
 
-    if (!response.ok) {
-      const errorText = await response
-        .text()
-        .catch(() => "Could not read error");
-      console.error("Ollama API error:", response.statusText, errorText);
+    if (!rawGreeting) {
       return null;
     }
-
-    const data = await response.json();
-    console.log(
-      "Ollama API response data:",
-      JSON.stringify(data).substring(0, 200),
-    );
-    const greeting = data.response?.trim();
-
-    if (!greeting) {
-      console.error("No greeting in response. Full data:", data);
-      return null;
-    }
-
-    console.log("Raw greeting from Ollama:", greeting);
 
     // Clean up the greeting - remove quotes, extra whitespace, etc.
-    const cleanGreeting = greeting
-      .replace(/^["']|["']$/g, "") // Remove quotes
-      .replace(/\n+/g, " ") // Replace newlines with spaces
-      .replace(/\s+/g, " ") // Normalize whitespace
+    const cleanGreeting = rawGreeting
+      .replace(/^["']|["']$/g, "")
+      .replace(/\n+/g, " ")
+      .replace(/\s+/g, " ")
       .trim();
 
     return cleanGreeting || null;
   } catch (error) {
-    console.error("Error generating greeting with Ollama:", error);
-    if (error instanceof Error) {
-      console.error("Error message:", error.message);
-      console.error("Error stack:", error.stack);
-    }
-    // Return a simple fallback greeting
+    console.error("[Gemini Error] generating greeting:", error);
     return null;
   }
 }

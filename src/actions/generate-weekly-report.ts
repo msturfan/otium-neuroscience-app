@@ -3,10 +3,10 @@
 import { prisma } from "@/db/prisma";
 import { getUser } from "@/auth/server";
 import { getLastWeekStart } from "@/lib/timezone-utils";
+import { geminiChat } from "@/lib/gemini";
 
 /**
  * Generates a weekly report for a user based on their notes from the last 7 days
- * Uses OLLAMA_MODEL_WEEKLY_REPORT (qwen2.5:3b) via Ollama
  */
 export async function generateWeeklyReport(
   userId: string,
@@ -70,20 +70,6 @@ export async function generateWeeklyReport(
       ? notesText.slice(-4000) 
       : notesText;
 
-    // Get Ollama configuration
-    const ollamaUrl = process.env.OLLAMA_API_URL;
-    const model = process.env.OLLAMA_MODEL_WEEKLY_REPORT || "qwen2.5:3b";
-
-    if (!ollamaUrl) {
-      console.error(
-        "Ollama configuration missing. Set OLLAMA_API_URL in .env.local",
-      );
-      return {
-        reportText: null,
-        errorMessage: "AI service is not configured. Please contact support.",
-      };
-    }
-
     // Create a comprehensive prompt for weekly report generation
     const prompt = `You are an expert life analyst. Analyze the following weekly notes from a user and generate a detailed, insightful weekly report.
 
@@ -112,35 +98,12 @@ ${truncatedNotes}
 
 Weekly Report:`;
 
-    // Call Ollama API
-    const response = await fetch(`${ollamaUrl}/api/generate`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        model: model,
-        prompt: prompt,
-        stream: false,
-        options: {
-          temperature: 0.7, // Balanced creativity for insightful analysis
-          num_predict: 1000, // Enough tokens for a comprehensive report
-        },
-      }),
-    });
+    const systemPrompt =
+      "You are an expert life analyst generating insightful weekly reports from user notes.";
 
-    if (!response.ok) {
-      console.error("Ollama API error:", response.statusText);
-      return {
-        reportText: null,
-        errorMessage: "Failed to generate weekly report. Please try again.",
-      };
-    }
+    const reportText = await geminiChat(systemPrompt, prompt);
 
-    const data = await response.json();
-    const reportText = data.response?.trim();
-
-    if (!reportText) {
+    if (!reportText?.trim()) {
       return {
         reportText: null,
         errorMessage: "No report generated. Please try again.",
@@ -171,7 +134,7 @@ Weekly Report:`;
       errorMessage: null,
     };
   } catch (error) {
-    console.error("Error generating weekly report with Ollama:", error);
+    console.error("[Gemini Error] generating weekly report:", error);
     return {
       reportText: null,
       errorMessage:
@@ -231,5 +194,3 @@ export async function getCurrentWeeklyReport(): Promise<{
     };
   }
 }
-
-
