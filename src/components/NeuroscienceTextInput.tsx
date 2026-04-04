@@ -28,6 +28,7 @@ import {
   TooltipContent,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
+import { NOTE_PERSISTED_EVENT } from "@/components/nav-actions";
 
 type Props = {
   noteId: string;
@@ -425,10 +426,21 @@ export default function NeuroscienceTextInput({
           const created = await createNeuroscienceAction(noteId);
           if (!created?.errorMessage) {
             await updateNeuroscienceAction(noteId, textToSave);
+            window.dispatchEvent(
+              new CustomEvent(NOTE_PERSISTED_EVENT, {
+                detail: { noteId },
+              }),
+            );
           } else {
             toast.error("Failed to create note");
             return;
           }
+        } else {
+          window.dispatchEvent(
+            new CustomEvent(NOTE_PERSISTED_EVENT, {
+              detail: { noteId },
+            }),
+          );
         }
       }
     }
