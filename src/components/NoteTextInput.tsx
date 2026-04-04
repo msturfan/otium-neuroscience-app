@@ -14,7 +14,7 @@ import NotesFeed, { NoteLike } from "./NotesFeed";
 import useNote from "@/hooks/useNote";
 import { GuestNote } from "@/providers/NoteProvider";
 import { updateNoteAction, createNoteAction } from "@/actions/notes";
-import { generateNoteTitle } from "@/actions/generate-title";
+//import { generateNoteTitle } from "@/actions/generate-title";
 import { generateNoteGreeting } from "@/actions/generate-greeting";
 import MicrophoneButton from "./MicrophoneButton";
 import AskAIButton from "./AskAIButton";
@@ -252,9 +252,9 @@ export default function NoteTextInput({
     const existing = guestNotes.find((n) => n.id === noteId);
 
     // Generate title if note has substantial content
-    let title: string | null = null;
+    const title: string | null = null;
     if (text.trim().length > 20) {
-      title = await generateNoteTitle(text);
+      //title = await generateNoteTitle(text);
     }
 
     if (existing) {
