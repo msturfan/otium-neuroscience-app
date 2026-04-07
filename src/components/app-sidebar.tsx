@@ -90,7 +90,7 @@ const data = {
     },
     {
       title: "Workout Program",
-      url: "#",
+      url: "/workout/program",
       icon: IconCalendarEventFilled,
     },
     {

@@ -22,12 +22,13 @@ export function NavWorkoutProgramProfile({ user }: Props) {
   const ctx = useOptionalWorkoutProfileEditor();
 
   const isWorkout = pathname.startsWith("/workout");
+  const isWorkoutSubPage =
+    pathname === "/workout/athlete" || pathname === "/workout/program";
   const show =
     ctx &&
     isWorkout &&
     user &&
-    ctx.onWorkoutPage &&
-    ctx.workoutPageHasProfile;
+    ((ctx.onWorkoutPage && ctx.workoutPageHasProfile) || isWorkoutSubPage);
 
   if (!show) return null;
 
@@ -38,9 +39,11 @@ export function NavWorkoutProgramProfile({ user }: Props) {
       <SidebarGroupContent className="border-b border-sidebar-border pb-2">
         <SidebarMenu>
           <SidebarMenuItem>
-            <SidebarMenuButton type="button" onClick={ctx.requestEditProfile}>
-              <Icon />
-              <span>Athlete Profile</span>
+            <SidebarMenuButton asChild isActive={pathname === "/workout/athlete"}>
+              <a href="/workout/athlete">
+                <Icon />
+                <span>Athlete Profile</span>
+              </a>
             </SidebarMenuButton>
           </SidebarMenuItem>
         </SidebarMenu>
