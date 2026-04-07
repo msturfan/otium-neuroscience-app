@@ -23,6 +23,7 @@ import {
   CheckCircle2,
   FileText,
 } from "lucide-react";
+import LLMResponse from "@/components/LLMResponse";
 
 interface Note {
   id: string;
@@ -234,11 +235,7 @@ export default function InboxDisplay({ userEmail, initialData }: InboxDisplayPro
             </div>
           </CardHeader>
           <CardContent>
-            <div className="prose prose-sm dark:prose-invert max-w-none">
-              <div className="whitespace-pre-wrap text-sm leading-relaxed">
-                {report.reportText}
-              </div>
-            </div>
+            <LLMResponse content={report.reportText} />
           </CardContent>
         </Card>
       )}
