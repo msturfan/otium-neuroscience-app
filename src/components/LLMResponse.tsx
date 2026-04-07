@@ -131,6 +131,12 @@ const markdownComponents: Components = {
     </a>
   ),
 
+  /* ---------- Images (disabled: model must not rely on remote URLs) ---------- */
+  img: ({ alt }) =>
+    alt?.trim() ? (
+      <p className="my-2 text-sm italic text-gray-500 dark:text-gray-400">{alt}</p>
+    ) : null,
+
   /* ---------- Tables ---------- */
   table: ({ children }) => (
     <div className="my-4 overflow-x-auto rounded-lg border border-gray-200 dark:border-gray-700">
