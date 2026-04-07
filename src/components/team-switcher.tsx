@@ -32,7 +32,9 @@ export function TeamSwitcher({
 }) {
   const router = useRouter();
   const pathname = usePathname();
-  
+
+  const [workspaceMenuOpen, setWorkspaceMenuOpen] = React.useState(false);
+
   const [activeTeam, setActiveTeam] = React.useState(() => {
     // Initial state based on current pathname
     const matchingTeam = teams.find((team) => {
@@ -67,7 +69,9 @@ export function TeamSwitcher({
       e.preventDefault();
       e.stopPropagation();
     }
-    
+
+    setWorkspaceMenuOpen(false);
+
     if (team.url) {
       if (
         (team.url === "/neuroplasticity" || team.url === "/workout") &&
@@ -99,7 +103,10 @@ export function TeamSwitcher({
   return (
     <SidebarMenu>
       <SidebarMenuItem>
-        <DropdownMenu>
+        <DropdownMenu
+          open={workspaceMenuOpen}
+          onOpenChange={setWorkspaceMenuOpen}
+        >
           <DropdownMenuTrigger asChild>
             <SidebarMenuButton className="w-fit px-1.5">
               <div className="flex aspect-square size-5 items-center justify-center rounded-full overflow-hidden">
