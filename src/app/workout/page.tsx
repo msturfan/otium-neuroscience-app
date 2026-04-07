@@ -4,6 +4,7 @@ import { prisma } from "@/db/prisma";
 import { getUser } from "@/auth/server";
 import HomeToaster from "@/components/HomeToaster";
 import WorkoutTextInput from "@/components/WorkoutTextInput";
+import WorkoutGate from "@/components/workout/WorkoutGate";
 import { getWorkoutGreeting } from "@/lib/workout-greetings-server";
 import { getTimeBasedGreeting } from "@/lib/get-time-based-greeting";
 import { getUserProfile } from "@/lib/user-utils";
@@ -37,6 +38,11 @@ export default async function WorkoutPage({ searchParams }: Props) {
     redirect(`/workout?noteId=${newId}`);
   }
 
+  const workoutProfile = await prisma.workoutProfile.findUnique({
+    where: { userId: user.id },
+    select: { id: true },
+  });
+
   let note: { text: string } | null = null;
   note = await prisma.workout.findFirst({
     where: { id: noteId, authorId: user.id },
@@ -53,25 +59,27 @@ export default async function WorkoutPage({ searchParams }: Props) {
   const hasContentServer = !!feedNotes[0]?.text?.trim();
 
   return (
-    <div
-      id="shell"
-      className={`flex h-full min-h-0 flex-col items-center ${
-        hasContentServer ? "justify-start" : "justify-center"
-      } gap-4 px-4`}
-    >
-      <div className="relative w-full max-w-4xl flex-1 min-h-0">
-        <div className="flex h-full min-h-0 justify-center">
-          <WorkoutTextInput
-            noteId={noteId}
-            startingNoteText={note?.text || ""}
-            user={user}
-            feedNotes={feedNotes}
-            greeting={greeting}
-            welcomeMessage={`${timeBasedGreeting}, ${userName}!`}
-          />
+    <WorkoutGate hasProfile={!!workoutProfile}>
+      <div
+        id="shell"
+        className={`flex h-full min-h-0 flex-col items-center ${
+          hasContentServer ? "justify-start" : "justify-center"
+        } gap-4 px-4`}
+      >
+        <div className="relative w-full max-w-4xl flex-1 min-h-0">
+          <div className="flex h-full min-h-0 justify-center">
+            <WorkoutTextInput
+              noteId={noteId}
+              startingNoteText={note?.text || ""}
+              user={user}
+              feedNotes={feedNotes}
+              greeting={greeting}
+              welcomeMessage={`${timeBasedGreeting}, ${userName}!`}
+            />
+          </div>
+          <HomeToaster />
         </div>
-        <HomeToaster />
       </div>
-    </div>
+    </WorkoutGate>
   );
 }
