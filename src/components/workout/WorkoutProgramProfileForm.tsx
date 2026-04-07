@@ -122,6 +122,7 @@ export default function WorkoutProgramProfileForm({
     } else {
       setFormData({ ...DEFAULT_WORKOUT_PROFILE });
       setErrors({});
+      onCancel?.();
     }
   }, [mode, onCancel]);
 
