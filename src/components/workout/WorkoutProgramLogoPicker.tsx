@@ -33,7 +33,12 @@ export function WorkoutProgramLogoPicker({
           type="button"
           variant="ghost"
           size="icon"
-          className={cn("mb-2 h-12 w-12 rounded-full", className)}
+          className={cn(
+            "theme-toggle-button mb-2 h-12 w-12 rounded-full",
+            "relative overflow-hidden transition-all duration-200 ease-out",
+            "hover:bg-accent/50 active:scale-95",
+            className,
+          )}
           aria-label="Change program profile logo"
         >
           <CurrentIcon className="text-foreground size-8" stroke="2" />
@@ -52,7 +57,9 @@ export function WorkoutProgramLogoPicker({
                   setOpen(false);
                 }}
                 className={cn(
-                  "hover:bg-accent hover:text-accent-foreground flex items-center justify-center rounded-md border p-2 transition-colors",
+                  "theme-toggle-button hover:bg-accent hover:text-accent-foreground flex items-center justify-center rounded-md border p-2",
+                  "relative overflow-hidden transition-all duration-200 ease-out",
+                  "hover:scale-105 active:scale-95",
                   active ? "border-primary bg-primary/10" : "border-border",
                 )}
                 aria-pressed={active}
