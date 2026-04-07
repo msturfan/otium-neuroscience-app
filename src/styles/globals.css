@@ -389,6 +389,11 @@
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
 }
 
+/* Create Workout Program: keep selected blue chip; global hover shadow fights Tailwind ring */
+.theme-toggle-button[data-workout-composer-chip]:hover {
+  box-shadow: none;
+}
+
 .theme-toggle-button:active {
   animation: theme-button-pulse 0.25s cubic-bezier(0.4, 0, 0.2, 1);
 }

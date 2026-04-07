@@ -11,7 +11,8 @@ import {
 } from "react";
 import { toast } from "sonner";
 import { User } from "@supabase/supabase-js";
-import { Dumbbell, Square } from "lucide-react";
+import { Dumbbell, Plus, Square } from "lucide-react";
+import { IconCalendarEventFilled, IconXFilled } from "@tabler/icons-react";
 
 import { Textarea } from "./ui/textarea";
 import NewNoteButton from "./NewNoteButton";
@@ -19,7 +20,11 @@ import NotesFeed, { NoteLike } from "./NotesFeed";
 
 import useNote from "@/hooks/useNote";
 import { GuestNote } from "@/providers/NoteProvider";
-import { updateWorkoutAction, createWorkoutAction } from "@/actions/workout";
+import {
+  updateWorkoutAction,
+  createWorkoutAction,
+  deleteWorkoutAction,
+} from "@/actions/workout";
 //import { generateNoteTitle } from "@/actions/generate-title";
 import MicrophoneButton from "./MicrophoneButton";
 import { Button } from "./ui/button";
@@ -29,6 +34,17 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import { NOTE_PERSISTED_EVENT } from "@/components/nav-actions";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { useOptionalWorkoutProfileEditor } from "@/providers/WorkoutProfileEditorProvider";
+import { getWorkoutProgramLogoDefinition } from "@/lib/workout/workoutProgramLogos";
+import { cn } from "@/lib/utils";
+
+const WORKOUT_PRE_CREATE_NOTE_ID_KEY = "otium.workout.preCreateNoteId";
 
 type Props = {
   noteId: string;
@@ -87,6 +103,24 @@ export default function WorkoutTextInput({
   const [isStreaming, setIsStreaming] = useState(false);
   const abortControllerRef = useRef<AbortController | null>(null);
   const streamingMessageIdRef = useRef<string | null>(null);
+
+  const workoutProfileEditor = useOptionalWorkoutProfileEditor();
+  const { Icon: WorkoutProgramProfileIcon } = getWorkoutProgramLogoDefinition(
+    workoutProfileEditor?.workoutProgramLogoId,
+  );
+  const [workoutProgramComposerActive, setWorkoutProgramComposerActive] =
+    useState(false);
+  const [workoutAddIconRotating, setWorkoutAddIconRotating] = useState(false);
+  const [workoutAddMenuOpen, setWorkoutAddMenuOpen] = useState(false);
+  /** Drives profile → IconXFilled swap; CSS `group-hover` is unreliable with Tailwind v4 named groups (e.g. `group/sidebar-wrapper`). */
+  const [workoutAddTriggerHovered, setWorkoutAddTriggerHovered] =
+    useState(false);
+
+  useEffect(() => {
+    if (!workoutProgramComposerActive) {
+      setWorkoutAddTriggerHovered(false);
+    }
+  }, [workoutProgramComposerActive]);
 
   // Feed scoped to this noteId only
   const userNotes: NoteLike[] = user
@@ -505,6 +539,129 @@ export default function WorkoutTextInput({
     });
   };
 
+  const handleCreateWorkoutProgram = useCallback(() => {
+    setWorkoutAddTriggerHovered(false);
+    try {
+      if (typeof window !== "undefined") {
+        sessionStorage.setItem(WORKOUT_PRE_CREATE_NOTE_ID_KEY, noteId);
+      }
+    } catch {
+      /* ignore */
+    }
+    setWorkoutAddIconRotating(true);
+    setWorkoutProgramComposerActive(true);
+    const newId = crypto.randomUUID();
+    // Do NOT pre-create the DB record here — that caused an empty note to appear
+    // in the sidebar before the user typed anything. sendNote (via updateWorkoutAction's
+    // built-in upsert) will create the record on first actual submission.
+    router.push(`/workout?noteId=${newId}`);
+    window.setTimeout(() => {
+      setWorkoutAddIconRotating(false);
+    }, 600);
+  }, [router, noteId]);
+
+  const handleCancelWorkoutProgram = useCallback(async () => {
+    setWorkoutAddTriggerHovered(false);
+    setWorkoutProgramComposerActive(false);
+    setWorkoutAddMenuOpen(false);
+
+    let returnNoteId: string | null = null;
+    try {
+      if (typeof window !== "undefined") {
+        returnNoteId = sessionStorage.getItem(WORKOUT_PRE_CREATE_NOTE_ID_KEY);
+        sessionStorage.removeItem(WORKOUT_PRE_CREATE_NOTE_ID_KEY);
+      }
+    } catch {
+      /* ignore */
+    }
+
+    await deleteWorkoutAction(noteId);
+
+    if (returnNoteId && returnNoteId !== noteId) {
+      router.replace(`/workout?noteId=${returnNoteId}`);
+    } else if (typeof window !== "undefined" && window.history.length > 1) {
+      router.back();
+    } else {
+      router.replace("/workout");
+    }
+  }, [router, noteId]);
+
+  const addMenuButtonClassName = cn(
+    "theme-toggle-button relative h-8 w-8 shrink-0 overflow-hidden rounded-full p-0 text-muted-foreground hover:text-foreground",
+    "transition-all duration-200 ease-out hover:bg-accent/50 active:scale-95",
+  );
+
+  /** Create-workout mode — use real blue: theme `primary` is near-black in :root, not a blue. */
+  const addMenuComposerActiveClassName = cn(
+    addMenuButtonClassName,
+    "shadow-none hover:shadow-none hover:!shadow-none",
+    /* Keep chip when profile icon is shown and when X (cancel) is shown — beat ghost + .theme-toggle-button:hover */
+    "bg-blue-500/20 text-blue-700 ring-blue-500/55",
+    "hover:!bg-blue-500/30 hover:!text-blue-800 hover:!ring-blue-600/65",
+    "dark:bg-blue-400/20 dark:text-blue-300 dark:ring-blue-400/50",
+    "dark:hover:!bg-blue-400/28 dark:hover:!text-blue-200 dark:hover:!ring-blue-300/60",
+    "ring-2 ring-inset",
+    "focus-visible:ring-2 focus-visible:ring-inset focus-visible:!ring-blue-600 dark:focus-visible:!ring-blue-400",
+  );
+
+  const showComposerCancelIcon =
+    workoutProgramComposerActive && workoutAddTriggerHovered;
+
+  const addMenuIconStack = useMemo(
+    () => (
+      <div className="relative flex h-4 w-4 items-center justify-center">
+        <Plus
+          className={cn(
+            "theme-toggle-icon pointer-events-none absolute h-4 w-4",
+            "transition-all duration-500 ease-in-out",
+            workoutProgramComposerActive
+              ? "rotate-90 scale-0 opacity-0"
+              : "rotate-0 scale-100 opacity-100",
+          )}
+        />
+        <WorkoutProgramProfileIcon
+          className={cn(
+            "theme-toggle-icon pointer-events-none absolute z-[1] h-4 w-4",
+            workoutProgramComposerActive
+              ? cn(
+                  "transition-all duration-300 ease-in-out",
+                  !showComposerCancelIcon &&
+                    "rotate-0 scale-100 opacity-100",
+                  showComposerCancelIcon &&
+                    "z-0 -rotate-90 scale-0 opacity-0",
+                  workoutAddIconRotating && "rotating",
+                )
+              : cn(
+                  "transition-all duration-500 ease-in-out",
+                  "-rotate-90 scale-0 opacity-0",
+                ),
+          )}
+        />
+        <IconXFilled
+          className={cn(
+            "theme-toggle-icon pointer-events-none absolute z-[2] h-4 w-4",
+            "transition-all duration-300 ease-in-out",
+            !workoutProgramComposerActive && "scale-0 opacity-0",
+            workoutProgramComposerActive &&
+              cn(
+                !showComposerCancelIcon &&
+                  "-rotate-90 scale-0 opacity-0",
+                showComposerCancelIcon &&
+                  "rotate-0 scale-100 opacity-100",
+              ),
+          )}
+          aria-hidden
+        />
+      </div>
+    ),
+    [
+      WorkoutProgramProfileIcon,
+      showComposerCancelIcon,
+      workoutAddIconRotating,
+      workoutProgramComposerActive,
+    ],
+  );
+
   return (
     <div
       className={`relative mx-auto flex h-full min-h-0 w-full max-w-3xl flex-1 flex-col ${
@@ -535,80 +692,125 @@ export default function WorkoutTextInput({
       )}
 
       {/* Composer — always visible for follow-up questions */}
-      <div className="relative flex w-full items-end px-3.5 py-2.5">
+      <div className="relative flex w-full items-center px-3.5 py-2.5">
         <div className="relative flex w-full max-w-4xl flex-col rounded-2xl border bg-white shadow dark:bg-gray-900">
-          <div className="relative">
-            <Textarea
-              ref={textareaRef}
-              value={noteText}
-              onChange={handleUpdateNote}
-              onKeyDown={handleKeyDown}
-              placeholder=""
-              disabled={isStreaming}
-              className="custom-scrollbar field-sizing-fixed flex-1 resize-none rounded-2xl border-0 bg-transparent py-4 pr-28 pl-4 shadow-none focus:ring-0 focus:outline-none focus-visible:ring-0 focus-visible:outline-none"
-              rows={1}
-              style={{ minHeight: 48 }}
-            />
-            {/* Buttons absolutely positioned on the right side */}
-            <div className="absolute right-2 bottom-2.5 flex items-center gap-1.5">
-              {isStreaming ? (
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <Button
-                      onClick={handleStopStreaming}
-                      size="sm"
-                      variant="secondary"
-                      className="h-8 w-8 rounded-full border border-black bg-black p-0 text-white hover:bg-black/90 dark:border-white dark:bg-white dark:text-black dark:hover:bg-white/90"
-                    >
-                      <Square className="h-3.5 w-3.5" />
-                    </Button>
-                  </TooltipTrigger>
-                  <TooltipContent>Stop generating</TooltipContent>
-                </Tooltip>
-              ) : (
-                <>
-                  <MicrophoneButton onTranscript={handleSpeechTranscript} />
-                  <NewNoteButton
-                    user={user}
-                    onSend={sendNote}
-                    disabled={!noteText.trim()}
-                  />
-                </>
+          {/* Flex row: + button is a sibling of the textarea column so placeholders never share its layout box */}
+          <div className="flex w-full min-h-0 items-center gap-1.5 px-2 pb-2.5 pt-1">
+            {workoutProgramComposerActive ? (
+              <Button
+                type="button"
+                size="sm"
+                variant="ghost"
+                disabled={isStreaming}
+                data-workout-composer-chip=""
+                onPointerEnter={() => setWorkoutAddTriggerHovered(true)}
+                onPointerLeave={() => setWorkoutAddTriggerHovered(false)}
+                onFocus={() => setWorkoutAddTriggerHovered(true)}
+                onBlur={() => setWorkoutAddTriggerHovered(false)}
+                onClick={() => void handleCancelWorkoutProgram()}
+                className={addMenuComposerActiveClassName}
+                aria-label="Cancel workout program"
+              >
+                {addMenuIconStack}
+              </Button>
+            ) : (
+              <DropdownMenu
+                open={workoutAddMenuOpen}
+                onOpenChange={setWorkoutAddMenuOpen}
+              >
+                <DropdownMenuTrigger asChild>
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant="ghost"
+                    disabled={isStreaming}
+                    className={addMenuButtonClassName}
+                    aria-label="Add workout program"
+                  >
+                    {addMenuIconStack}
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="start" side="top" className="min-w-[14rem]">
+                  <DropdownMenuItem
+                    className="gap-2"
+                    onSelect={() => handleCreateWorkoutProgram()}
+                  >
+                    <IconCalendarEventFilled className="size-4 shrink-0 opacity-80" />
+                    Create Workout Program
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            )}
+            <div className="relative min-h-[48px] min-w-0 flex-1">
+              <Textarea
+                ref={textareaRef}
+                value={noteText}
+                onChange={handleUpdateNote}
+                onKeyDown={handleKeyDown}
+                placeholder=""
+                disabled={isStreaming}
+                className="custom-scrollbar field-sizing-fixed min-h-[48px] w-full resize-none rounded-xl border-0 bg-transparent py-4 pr-28 pl-3 shadow-none focus:ring-0 focus:outline-none focus-visible:ring-0 focus-visible:outline-none"
+                rows={1}
+                style={{ minHeight: 48 }}
+              />
+              <div className="absolute right-2 bottom-2.5 z-[1] flex items-center gap-1.5">
+                {isStreaming ? (
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Button
+                        onClick={handleStopStreaming}
+                        size="sm"
+                        variant="secondary"
+                        className="h-8 w-8 rounded-full border border-black bg-black p-0 text-white hover:bg-black/90 dark:border-white dark:bg-white dark:text-black dark:hover:bg-white/90"
+                      >
+                        <Square className="h-3.5 w-3.5" />
+                      </Button>
+                    </TooltipTrigger>
+                    <TooltipContent>Stop generating</TooltipContent>
+                  </Tooltip>
+                ) : (
+                  <>
+                    <MicrophoneButton onTranscript={handleSpeechTranscript} />
+                    <NewNoteButton
+                      user={user}
+                      onSend={sendNote}
+                      disabled={!noteText.trim()}
+                    />
+                  </>
+                )}
+              </div>
+              {!noteText && !hasTyped && !hasContent && (
+                <div
+                  className="pointer-events-none absolute inset-0 flex items-start pt-4 pr-28 pl-3"
+                  suppressHydrationWarning
+                >
+                  <span
+                    suppressHydrationWarning
+                    className={
+                      isHydrated
+                        ? "typewriter-text text-muted-foreground text-base md:text-sm"
+                        : "text-muted-foreground text-base opacity-0 md:text-sm"
+                    }
+                    style={
+                      isHydrated
+                        ? {
+                            animation: `typewriter ${Math.min(greeting.length * 0.06, 2.5)}s steps(${greeting.length}) forwards`,
+                          }
+                        : undefined
+                    }
+                  >
+                    {greeting}
+                  </span>
+                </div>
+              )}
+              {!noteText && hasContent && !isStreaming && (
+                <div className="pointer-events-none absolute inset-0 flex items-start pt-4 pr-28 pl-3">
+                  <span className="text-muted-foreground text-base md:text-sm">
+                    Ask a follow-up question...
+                  </span>
+                </div>
               )}
             </div>
-            {/* Typewriter placeholder - shows only on initial load, not after user has typed */}
-            {!noteText && !hasTyped && !hasContent && (
-              <div
-                className="pointer-events-none absolute inset-0 flex items-start pt-4 pr-28 pl-4"
-                suppressHydrationWarning
-              >
-                <span
-                  suppressHydrationWarning
-                  className={
-                    isHydrated
-                      ? "typewriter-text text-muted-foreground text-base md:text-sm"
-                      : "text-muted-foreground text-base opacity-0 md:text-sm"
-                  }
-                  style={
-                    isHydrated
-                      ? {
-                          animation: `typewriter ${Math.min(greeting.length * 0.06, 2.5)}s steps(${greeting.length}) forwards`,
-                        }
-                      : undefined
-                  }
-                >
-                  {greeting}
-                </span>
-              </div>
-            )}
-            {/* Follow-up placeholder */}
-            {!noteText && hasContent && !isStreaming && (
-              <div className="pointer-events-none absolute inset-0 flex items-start pt-4 pr-28 pl-4">
-                <span className="text-muted-foreground text-base md:text-sm">
-                  Ask a follow-up question...
-                </span>
-              </div>
-            )}
           </div>
         </div>
       </div>
