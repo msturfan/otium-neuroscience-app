@@ -2,7 +2,14 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { useRouter, useSearchParams, usePathname } from "next/navigation";
-import { ChevronRight, ClipboardList, Copy, Loader2, Pin } from "lucide-react";
+import {
+  ChevronRight,
+  ClipboardList,
+  Copy,
+  Loader2,
+  Pin,
+  type LucideIcon,
+} from "lucide-react";
 import { toast } from "sonner";
 import Image from "next/image";
 import {
@@ -53,6 +60,7 @@ type UserNote = {
 type Props = {
   user: User | null;
   onKnownNoteIdsChange?: (ids: Set<string> | null) => void;
+  appsItems?: { title: string; url: string; icon: LucideIcon }[];
 };
 
 const SIDEBAR_NOTES_EXPANDED_KEY = "otium.sidebar.myNotesExpanded";
@@ -60,8 +68,13 @@ const SIDEBAR_NEUROSCIENCE_EXPANDED_KEY = "otium.sidebar.neuroscienceExpanded";
 const SIDEBAR_WORKOUT_EXPANDED_KEY = "otium.sidebar.workoutExpanded";
 const SIDEBAR_WORKOUT_PROFILE_EXPANDED_KEY =
   "otium.sidebar.workoutProfileExpanded";
+const SIDEBAR_APPS_EXPANDED_KEY_OTIUM = "otium.sidebar.appsExpanded.otium";
+const SIDEBAR_APPS_EXPANDED_KEY_NEUROSCIENCE =
+  "otium.sidebar.appsExpanded.neuroscience";
+const SIDEBAR_APPS_EXPANDED_KEY_WORKOUT =
+  "otium.sidebar.appsExpanded.workout";
 
-export function NavNotes({ user, onKnownNoteIdsChange }: Props) {
+export function NavNotes({ user, onKnownNoteIdsChange, appsItems }: Props) {
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
@@ -76,6 +89,12 @@ export function NavNotes({ user, onKnownNoteIdsChange }: Props) {
       ? SIDEBAR_WORKOUT_EXPANDED_KEY
       : SIDEBAR_NOTES_EXPANDED_KEY;
 
+  const appsExpandedStorageKey = isNeuroplasticity
+    ? SIDEBAR_APPS_EXPANDED_KEY_NEUROSCIENCE
+    : isWorkout
+      ? SIDEBAR_APPS_EXPANDED_KEY_WORKOUT
+      : SIDEBAR_APPS_EXPANDED_KEY_OTIUM;
+
   const pinnedContext: PinnedChatContext = isNeuroplasticity
     ? "neuroscience"
     : isWorkout
@@ -83,6 +102,7 @@ export function NavNotes({ user, onKnownNoteIdsChange }: Props) {
       : "otium";
 
   const [sectionOpen, setSectionOpen] = useState(true);
+  const [appsSectionOpen, setAppsSectionOpen] = useState(false);
   const [workoutProfileSectionOpen, setWorkoutProfileSectionOpen] =
     useState(true);
   const [userNotes, setUserNotes] = useState<UserNote[]>([]);
@@ -107,6 +127,24 @@ export function NavNotes({ user, onKnownNoteIdsChange }: Props) {
       setWorkoutProfileSectionOpen(true);
     }
   }, [isWorkout]);
+
+  useEffect(() => {
+    try {
+      const stored = localStorage.getItem(appsExpandedStorageKey);
+      setAppsSectionOpen(stored === null ? false : stored === "true");
+    } catch {
+      setAppsSectionOpen(false);
+    }
+  }, [appsExpandedStorageKey]);
+
+  const handleAppsSectionOpenChange = (open: boolean) => {
+    setAppsSectionOpen(open);
+    try {
+      localStorage.setItem(appsExpandedStorageKey, String(open));
+    } catch {
+      /* ignore */
+    }
+  };
 
   const handleSectionOpenChange = (open: boolean) => {
     setSectionOpen(open);
@@ -265,9 +303,65 @@ export function NavNotes({ user, onKnownNoteIdsChange }: Props) {
     ? "Hide Workout profile"
     : "Show Workout profile";
 
+  const appsToggleAriaLabel = appsSectionOpen ? "Hide apps" : "Show apps";
+
+  const isAppItemActive = (url: string) => {
+    if (url === "/") {
+      return pathname === "/";
+    }
+    return pathname.startsWith(url);
+  };
+
+  const showAppsSection = appsItems && appsItems.length > 0;
+
   return (
     <>
     <SidebarGroup>
+      {showAppsSection ? (
+        <Collapsible
+          open={appsSectionOpen}
+          onOpenChange={handleAppsSectionOpenChange}
+        >
+          <SidebarGroupLabel asChild>
+            <CollapsibleTrigger
+              type="button"
+              aria-expanded={appsSectionOpen}
+              aria-label={appsToggleAriaLabel}
+              className={cn(
+                "hover:bg-sidebar-accent/60 hover:text-sidebar-accent-foreground w-full cursor-pointer gap-2 pr-2 text-left",
+              )}
+            >
+              <ChevronRight
+                className={cn(
+                  "shrink-0 transition-transform duration-200",
+                  appsSectionOpen && "rotate-90",
+                )}
+                aria-hidden
+              />
+              <span className="min-w-0 flex-1 truncate">Apps</span>
+            </CollapsibleTrigger>
+          </SidebarGroupLabel>
+          <CollapsibleContent>
+            <SidebarGroupContent>
+              <SidebarMenu>
+                {appsItems!.map((item) => (
+                  <SidebarMenuItem key={item.title}>
+                    <SidebarMenuButton
+                      asChild
+                      isActive={isAppItemActive(item.url)}
+                    >
+                      <a href={item.url}>
+                        <item.icon />
+                        <span>{item.title}</span>
+                      </a>
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
+                ))}
+              </SidebarMenu>
+            </SidebarGroupContent>
+          </CollapsibleContent>
+        </Collapsible>
+      ) : null}
       {showWorkoutProfileEntry ? (
         <Collapsible
           open={workoutProfileSectionOpen}
@@ -326,14 +420,16 @@ export function NavNotes({ user, onKnownNoteIdsChange }: Props) {
               )}
               aria-hidden
             />
-            <span className="flex min-w-0 flex-1 items-center gap-2">
-              <span className="truncate">{sectionTitle}</span>
-              {isGuest && (
+            {isGuest ? (
+              <span className="flex min-w-0 flex-1 items-center gap-2">
+                <span className="truncate">{sectionTitle}</span>
                 <Badge variant="secondary" className="text-xs normal-case">
                   Guest
                 </Badge>
-              )}
-            </span>
+              </span>
+            ) : (
+              <span className="min-w-0 flex-1 truncate">{sectionTitle}</span>
+            )}
           </CollapsibleTrigger>
         </SidebarGroupLabel>
 
