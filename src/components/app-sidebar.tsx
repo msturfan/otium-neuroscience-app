@@ -14,7 +14,6 @@ import {
 
 import { NavNotes } from "@/components/nav-notes";
 import { NavMain } from "@/components/nav-main";
-import { NavSecondary } from "@/components/nav-secondary";
 import { NavUser } from "@/components/nav-user";
 import { TeamSwitcher } from "@/components/team-switcher";
 import { SearchCommand } from "@/components/SearchCommand";
@@ -149,8 +148,11 @@ export function AppSidebar({
         </div>
       </SidebarHeader>
       <SidebarContent>
-        <NavNotes user={user} onKnownNoteIdsChange={setKnownNoteIds} />
-        <NavSecondary items={navSecondaryFiltered} className="mt-auto" />
+        <NavNotes
+          user={user}
+          onKnownNoteIdsChange={setKnownNoteIds}
+          appsItems={navSecondaryFiltered}
+        />
       </SidebarContent>
       <SidebarFooter>
         <NavUser user={displayUser} isGuest={!user} />
