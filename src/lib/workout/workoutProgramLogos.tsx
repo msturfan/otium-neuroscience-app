@@ -6,7 +6,6 @@ import {
   IconBallFootball,
   IconBallTennis,
   IconBike,
-  IconDisc,
   IconKarate,
   IconKayak,
   IconRun,
@@ -21,7 +20,6 @@ import {
 export type WorkoutProgramLogoId =
   | "dumbbell"
   | "skiJumping"
-  | "weightPlate"
   | "weight"
   | "running"
   | "cycling"
@@ -49,7 +47,6 @@ export type WorkoutProgramLogoDefinition = {
 export const WORKOUT_PROGRAM_LOGOS: WorkoutProgramLogoDefinition[] = [
   { id: "dumbbell", label: "Dumbbell", Icon: IconBarbell },
   { id: "skiJumping", label: "Ski Jumping", Icon: IconSkiJumping },
-  { id: "weightPlate", label: "Weight Plate", Icon: IconDisc },
   { id: "weight", label: "Weight", Icon: IconWeight },
   { id: "running", label: "Running", Icon: IconRun },
   { id: "cycling", label: "Cycling", Icon: IconBike },
@@ -61,7 +58,6 @@ export const WORKOUT_PROGRAM_LOGOS: WorkoutProgramLogoDefinition[] = [
   { id: "baseball", label: "Baseball", Icon: IconBallBaseball },
   { id: "kayak", label: "Kayak", Icon: IconKayak },
   { id: "swimming", label: "Swimming", Icon: IconSwimming },
-  // No boxing gloves icon; closest "combat" icon in Tabler is Karate.
   { id: "boxingGloves", label: "Boxing Gloves", Icon: IconKarate },
   { id: "yogaMeditation", label: "Yoga / Meditation", Icon: IconYoga },
 ];
