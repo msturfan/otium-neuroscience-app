@@ -20,7 +20,7 @@ export function NavMain({
     icon: LucideIcon;
     isActive?: boolean;
   }[];
-  /** IDs currently shown under My Notes / Neuroscience; used so `/?noteId=` does not keep "New note" highlighted. */
+  /** IDs currently shown under My Notes / Neuroscience; used so `/?noteId=` does not keep "New Chat" highlighted. */
   knownNoteIds: Set<string> | null;
 }) {
   const pathname = usePathname();
@@ -29,7 +29,7 @@ export function NavMain({
   const noteId = searchParams.get("noteId");
 
   const isItemActive = (url: string, itemTitle: string) => {
-    if (itemTitle === "New note") {
+    if (itemTitle === "New Chat") {
       return isNewNoteNavActive(pathname, noteId, knownNoteIds);
     }
     // Handle root path - other items: avoid matching every `/?noteId=` as "/"
@@ -66,7 +66,7 @@ export function NavMain({
       {navItems.map((item) => (
         <SidebarMenuItem key={item.title}>
           <SidebarMenuButton asChild isActive={isItemActive(item.url, item.title)}>
-            {item.title === "New note" ? (
+            {item.title === "New Chat" ? (
               <a href={item.url} onClick={handleNewNoteClick}>
                 <item.icon />
                 <span>{item.title}</span>

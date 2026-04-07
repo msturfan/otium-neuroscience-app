@@ -82,7 +82,7 @@ const data = {
   ],
   navMain: [
     {
-      title: "New note",
+      title: "New Chat",
       url: "/",
       icon: Edit,
     },

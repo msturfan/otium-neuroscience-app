@@ -1,6 +1,6 @@
 /**
  * True on Otium (`/`) or Neuroscience composer when the URL note is not yet in the
- * sidebar list (fresh UUID / empty composer), matching "New note" nav highlighting.
+ * sidebar list (fresh UUID / empty composer), matching "New Chat" nav highlighting.
  */
 export function isNewNoteNavActive(
   pathname: string,
