@@ -44,6 +44,8 @@ type Props = {
 
 type FieldErrors = Partial<Record<keyof WorkoutProgramProfile, string>>;
 
+const requiredMarkClassName = "text-primary/70";
+
 export default function WorkoutProgramProfileForm({
   onComplete,
   onCancel,
@@ -154,7 +156,7 @@ export default function WorkoutProgramProfileForm({
         {/* Goal */}
         <div className="space-y-1.5">
           <Label htmlFor="goal">
-            Goal <span className="text-destructive">*</span>
+            Goal <span className={requiredMarkClassName}>*</span>
           </Label>
           <Input
             id="goal"
@@ -178,7 +180,7 @@ export default function WorkoutProgramProfileForm({
         {/* Training History Level */}
         <div className="space-y-1.5">
           <Label htmlFor="trainingHistoryLevel">
-            Training history level <span className="text-destructive">*</span>
+            Training history level <span className={requiredMarkClassName}>*</span>
           </Label>
           <div className="flex gap-2">
             {TRAINING_LEVELS.map((level) => (
@@ -213,7 +215,7 @@ export default function WorkoutProgramProfileForm({
         <div className="grid grid-cols-2 gap-4">
           <div className="space-y-1.5">
             <Label htmlFor="gymDaysPerWeek">
-              Gym days per week <span className="text-destructive">*</span>
+              Gym days per week <span className={requiredMarkClassName}>*</span>
             </Label>
             <Select
               value={String(formData.gymDaysPerWeek)}
@@ -245,7 +247,7 @@ export default function WorkoutProgramProfileForm({
 
           <div className="space-y-1.5">
             <Label htmlFor="timelineWeeks">
-              Timeline <span className="text-destructive">*</span>
+              Timeline <span className={requiredMarkClassName}>*</span>
             </Label>
             <Select
               value={String(formData.timelineWeeks)}
