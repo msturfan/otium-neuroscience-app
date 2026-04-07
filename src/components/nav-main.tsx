@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { type LucideIcon } from "lucide-react";
 
@@ -27,6 +28,7 @@ export function NavMain({
   const router = useRouter();
   const searchParams = useSearchParams();
   const noteId = searchParams.get("noteId");
+  const [showInProgress, setShowInProgress] = useState(false);
 
   const isItemActive = (url: string, itemTitle: string) => {
     if (itemTitle === "New Chat") {
@@ -57,29 +59,63 @@ export function NavMain({
     }
   };
 
-  const hideInbox =
-    pathname.startsWith("/neuroplasticity") || pathname.startsWith("/workout");
-  const navItems = hideInbox ? items.filter((item) => item.url !== "/inbox") : items;
+  const handleCreateWorkoutProgramClick = (
+    e: React.MouseEvent<HTMLAnchorElement>,
+  ) => {
+    e.preventDefault();
+    setShowInProgress(true);
+  };
+
+  useEffect(() => {
+    if (!showInProgress) return;
+    const timeout = window.setTimeout(() => {
+      setShowInProgress(false);
+    }, 1400);
+
+    return () => window.clearTimeout(timeout);
+  }, [showInProgress]);
+
+  const isWorkoutRoute = pathname.startsWith("/workout");
+  const hideInbox = pathname.startsWith("/neuroplasticity") || isWorkoutRoute;
+  const navItems = items.filter((item) => {
+    if (hideInbox && item.url === "/inbox") return false;
+    if (item.title === "Workout Program" && !isWorkoutRoute) return false;
+    return true;
+  });
 
   return (
-    <SidebarMenu>
-      {navItems.map((item) => (
-        <SidebarMenuItem key={item.title}>
-          <SidebarMenuButton asChild isActive={isItemActive(item.url, item.title)}>
-            {item.title === "New Chat" ? (
-              <a href={item.url} onClick={handleNewNoteClick}>
-                <item.icon />
-                <span>{item.title}</span>
-              </a>
-            ) : (
-              <a href={item.url}>
-                <item.icon />
-                <span>{item.title}</span>
-              </a>
-            )}
-          </SidebarMenuButton>
-        </SidebarMenuItem>
-      ))}
-    </SidebarMenu>
+    <>
+      <SidebarMenu>
+        {navItems.map((item) => (
+          <SidebarMenuItem key={item.title}>
+            <SidebarMenuButton asChild isActive={isItemActive(item.url, item.title)}>
+              {item.title === "New Chat" ? (
+                <a href={item.url} onClick={handleNewNoteClick}>
+                  <item.icon />
+                  <span>{item.title}</span>
+                </a>
+              ) : item.title === "Workout Program" ? (
+                <a href={item.url} onClick={handleCreateWorkoutProgramClick}>
+                  <item.icon />
+                  <span>{item.title}</span>
+                </a>
+              ) : (
+                <a href={item.url}>
+                  <item.icon />
+                  <span>{item.title}</span>
+                </a>
+              )}
+            </SidebarMenuButton>
+          </SidebarMenuItem>
+        ))}
+      </SidebarMenu>
+      {showInProgress ? (
+        <div className="pointer-events-none fixed inset-0 z-[9999] flex items-center justify-center">
+          <div className="rounded-md bg-black/80 px-4 py-2 text-sm font-medium text-white shadow-lg">
+            In progress
+          </div>
+        </div>
+      ) : null}
+    </>
   );
 }

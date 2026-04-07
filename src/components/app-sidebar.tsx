@@ -11,6 +11,7 @@ import {
   Landmark,
   HeartHandshake,
 } from "lucide-react";
+import { IconCalendarEventFilled } from "@tabler/icons-react";
 
 import { NavNotes } from "@/components/nav-notes";
 import { NavMain } from "@/components/nav-main";
@@ -86,6 +87,11 @@ const data = {
       title: "New Chat",
       url: "/",
       icon: Edit,
+    },
+    {
+      title: "Workout Program",
+      url: "#",
+      icon: IconCalendarEventFilled,
     },
     {
       title: "Inbox",

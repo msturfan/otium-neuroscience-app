@@ -40,7 +40,7 @@ export function NavWorkoutProgramProfile({ user }: Props) {
           <SidebarMenuItem>
             <SidebarMenuButton type="button" onClick={ctx.requestEditProfile}>
               <Icon />
-              <span>Program profile</span>
+              <span>Athlete Profile</span>
             </SidebarMenuButton>
           </SidebarMenuItem>
         </SidebarMenu>
