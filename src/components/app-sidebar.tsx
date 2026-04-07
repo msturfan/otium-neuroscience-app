@@ -8,7 +8,6 @@ import {
   Dumbbell,
   Edit,
   Inbox,
-  MessageCircleQuestion,
   Landmark,
   HeartHandshake,
 } from "lucide-react";
@@ -110,11 +109,6 @@ const data = {
       title: "Calendar",
       url: "/calendar",
       icon: Calendar,
-    },
-    {
-      title: "Help",
-      url: "/help",
-      icon: MessageCircleQuestion,
     },
   ],
 };

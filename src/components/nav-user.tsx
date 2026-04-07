@@ -3,6 +3,7 @@
 import {
   IconCreditCard,
   IconDotsVertical,
+  IconHelpCircle,
   IconLogin,
   IconLogout,
   IconNotification,
@@ -125,6 +126,12 @@ export function NavUser({
                     Sign up
                   </Link>
                 </DropdownMenuItem>
+                <DropdownMenuItem asChild>
+                  <Link href="/help" className="flex items-center">
+                    <IconHelpCircle />
+                    Help
+                  </Link>
+                </DropdownMenuItem>
               </DropdownMenuGroup>
             ) : (
               <>
@@ -144,6 +151,12 @@ export function NavUser({
                   <DropdownMenuItem>
                     <IconNotification />
                     Notifications
+                  </DropdownMenuItem>
+                  <DropdownMenuItem asChild>
+                    <Link href="/help" className="flex items-center">
+                      <IconHelpCircle />
+                      Help
+                    </Link>
                   </DropdownMenuItem>
                 </DropdownMenuGroup>
                 <DropdownMenuSeparator />
