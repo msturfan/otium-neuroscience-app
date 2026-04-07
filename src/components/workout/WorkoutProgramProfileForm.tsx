@@ -8,7 +8,6 @@ import {
   useCallback,
 } from "react";
 import { toast } from "sonner";
-import { Dumbbell } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -33,6 +32,8 @@ import {
   type WorkoutProgramProfile,
 } from "@/lib/types/workout";
 import { useWorkoutProfileEditor } from "@/providers/WorkoutProfileEditorProvider";
+import { WorkoutProgramLogoPicker } from "@/components/workout/WorkoutProgramLogoPicker";
+import type { WorkoutProgramLogoId } from "@/lib/workout/workoutProgramLogos";
 
 type Props = {
   onComplete: () => void;
@@ -53,7 +54,8 @@ export default function WorkoutProgramProfileForm({
   const [formData, setFormData] = useState<WorkoutProgramProfile>(initialData);
   const [errors, setErrors] = useState<FieldErrors>({});
   const [isPending, startTransition] = useTransition();
-  const { setWorkoutProfileFormOpen } = useWorkoutProfileEditor();
+  const { setWorkoutProfileFormOpen, workoutProgramLogoId, setWorkoutProgramLogoId } =
+    useWorkoutProfileEditor();
 
   useEffect(() => {
     setWorkoutProfileFormOpen(true);
@@ -131,7 +133,10 @@ export default function WorkoutProgramProfileForm({
   return (
     <div className="mx-auto flex w-full max-w-2xl flex-col items-center px-4 py-10">
       <div className="mb-6 flex flex-col items-center text-center">
-        <Dumbbell className="mb-2 h-8 w-8 text-foreground" />
+        <WorkoutProgramLogoPicker
+          value={workoutProgramLogoId}
+          onChange={(id: WorkoutProgramLogoId) => setWorkoutProgramLogoId(id)}
+        />
         <h1 className="text-xl font-semibold tracking-tight">
           {mode === "edit"
             ? "Edit your workout program"

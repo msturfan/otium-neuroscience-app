@@ -15,6 +15,7 @@ import {
 import { NavNotes } from "@/components/nav-notes";
 import { NavMain } from "@/components/nav-main";
 import { NavUser } from "@/components/nav-user";
+import { NavWorkoutProgramProfile } from "@/components/nav-workout-program-profile";
 import { TeamSwitcher } from "@/components/team-switcher";
 import { SearchCommand } from "@/components/SearchCommand";
 import {
@@ -154,7 +155,8 @@ export function AppSidebar({
           appsItems={navSecondaryFiltered}
         />
       </SidebarContent>
-      <SidebarFooter>
+      <SidebarFooter className="bg-sidebar shrink-0">
+        <NavWorkoutProgramProfile user={user} />
         <NavUser user={displayUser} isGuest={!user} />
       </SidebarFooter>
       <SidebarRail />
