@@ -40,7 +40,15 @@ export default async function WorkoutPage({ searchParams }: Props) {
 
   const workoutProfile = await prisma.workoutProfile.findUnique({
     where: { userId: user.id },
-    select: { id: true },
+    select: {
+      id: true,
+      goal: true,
+      trainingHistoryLevel: true,
+      gymDaysPerWeek: true,
+      timelineWeeks: true,
+      lifestyleConstraints: true,
+      nutritionBaseline: true,
+    },
   });
 
   let note: { text: string } | null = null;
@@ -75,6 +83,18 @@ export default async function WorkoutPage({ searchParams }: Props) {
               feedNotes={feedNotes}
               greeting={greeting}
               welcomeMessage={`${timeBasedGreeting}, ${userName}!`}
+              athleteProfile={
+                workoutProfile
+                  ? {
+                      goal: workoutProfile.goal,
+                      trainingHistoryLevel: workoutProfile.trainingHistoryLevel,
+                      gymDaysPerWeek: workoutProfile.gymDaysPerWeek,
+                      timelineWeeks: workoutProfile.timelineWeeks,
+                      lifestyleConstraints: workoutProfile.lifestyleConstraints,
+                      nutritionBaseline: workoutProfile.nutritionBaseline,
+                    }
+                  : null
+              }
             />
           </div>
           <HomeToaster />

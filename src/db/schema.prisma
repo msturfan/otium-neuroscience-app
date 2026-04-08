@@ -73,13 +73,14 @@ model User {
   updatedAt     DateTime           @default(now()) @updatedAt
   dob           DateTime?
   timezone      String?            @default("UTC")
-  Neuroscience   Neuroscience[]
-  workouts       Workout[]
-  workoutProfile WorkoutProfile?
-  notes          Note[]
-  streakHistory  UserStreakHistory?
-  weeklyReports  WeeklyReport[]
-  weeklyStreaks  WeeklyStreak[]
+  Neuroscience    Neuroscience[]
+  workouts        Workout[]
+  workoutProfile  WorkoutProfile?
+  workoutPrograms WorkoutProgram[]
+  notes           Note[]
+  streakHistory   UserStreakHistory?
+  weeklyReports   WeeklyReport[]
+  weeklyStreaks    WeeklyStreak[]
 }
 
 model RateLimitAttempt {
@@ -154,4 +155,19 @@ model WorkoutProfile {
 
   @@index([userId])
   @@map("workout_profiles")
+}
+
+model WorkoutProgram {
+  id        String   @id @default(uuid())
+  userId    String
+  title     String
+  startDate DateTime
+  endDate   DateTime
+  content   String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @default(now()) @updatedAt
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@map("workout_programs")
 }

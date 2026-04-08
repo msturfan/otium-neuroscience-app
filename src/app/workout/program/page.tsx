@@ -2,9 +2,8 @@ import { redirect } from "next/navigation";
 import Link from "next/link";
 import { prisma } from "@/db/prisma";
 import { getUser } from "@/auth/server";
-import { workoutProgramProfileFromDb } from "@/lib/types/workout";
-import { TRAINING_LEVELS, TIMELINE_OPTIONS } from "@/lib/types/workout";
 import { Button } from "@/components/ui/button";
+import SavedWorkoutPrograms from "@/components/workout/SavedWorkoutPrograms";
 
 export default async function WorkoutProgramPage() {
   const user = await getUser();
@@ -21,49 +20,32 @@ export default async function WorkoutProgramPage() {
     redirect("/workout/athlete");
   }
 
-  const profile = workoutProgramProfileFromDb(profileRow);
-
-  const trainingLevelLabel =
-    TRAINING_LEVELS.find((l) => l.value === profile.trainingHistoryLevel)
-      ?.label ?? profile.trainingHistoryLevel;
-
-  const timelineLabel =
-    TIMELINE_OPTIONS.find((o) => o.value === profile.timelineWeeks)?.label ??
-    `${profile.timelineWeeks} weeks`;
+  const savedPrograms = await prisma.workoutProgram.findMany({
+    where: { userId: user.id },
+    orderBy: { createdAt: "desc" },
+    select: {
+      id: true,
+      title: true,
+      startDate: true,
+      endDate: true,
+      content: true,
+      createdAt: true,
+    },
+  });
 
   return (
     <div className="mx-auto w-full max-w-2xl space-y-8 py-4">
+      {/* Page header */}
       <div>
         <h1 className="text-2xl font-semibold tracking-tight">
           Workout Program
         </h1>
         <p className="mt-1 text-sm text-muted-foreground">
-          Your current training profile and program parameters.
+          Review your saved training programs and continue planning in chat.
         </p>
       </div>
 
-      <div className="divide-y divide-border rounded-lg border">
-        <ProfileRow label="Goal" value={profile.goal} />
-        <ProfileRow label="Training level" value={trainingLevelLabel} />
-        <ProfileRow
-          label="Gym days per week"
-          value={`${profile.gymDaysPerWeek} ${profile.gymDaysPerWeek === 1 ? "day" : "days"}`}
-        />
-        <ProfileRow label="Program timeline" value={timelineLabel} />
-        {profile.lifestyleConstraints && (
-          <ProfileRow
-            label="Lifestyle constraints"
-            value={profile.lifestyleConstraints}
-          />
-        )}
-        {profile.nutritionBaseline && (
-          <ProfileRow
-            label="Nutrition baseline"
-            value={profile.nutritionBaseline}
-          />
-        )}
-      </div>
-
+      {/* Action buttons */}
       <div className="flex flex-col gap-3 sm:flex-row">
         <Button asChild size="lg" className="sm:flex-1">
           <Link href="/workout">Start a workout chat</Link>
@@ -72,17 +54,21 @@ export default async function WorkoutProgramPage() {
           <Link href="/workout/athlete">Edit athlete profile</Link>
         </Button>
       </div>
-    </div>
-  );
-}
 
-function ProfileRow({ label, value }: { label: string; value: string }) {
-  return (
-    <div className="flex flex-col gap-1 px-4 py-3 sm:flex-row sm:items-start sm:gap-4">
-      <span className="w-44 shrink-0 text-sm font-medium text-muted-foreground">
-        {label}
-      </span>
-      <span className="text-sm">{value}</span>
+      {/* Saved programs */}
+      <div>
+        <h2 className="mb-3 text-sm font-medium text-muted-foreground uppercase tracking-wide">
+          Saved Programs ({savedPrograms.length})
+        </h2>
+        <SavedWorkoutPrograms
+          programs={savedPrograms.map((p) => ({
+            ...p,
+            startDate: p.startDate.toISOString(),
+            endDate: p.endDate.toISOString(),
+            createdAt: p.createdAt.toISOString(),
+          }))}
+        />
+      </div>
     </div>
   );
 }

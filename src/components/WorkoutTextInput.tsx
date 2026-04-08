@@ -11,7 +11,7 @@ import {
 } from "react";
 import { toast } from "sonner";
 import { User } from "@supabase/supabase-js";
-import { Dumbbell, Plus, Square } from "lucide-react";
+import { Dumbbell, Plus, Save, Square } from "lucide-react";
 import { IconCalendarEventFilled, IconXFilled } from "@tabler/icons-react";
 
 import { Textarea } from "./ui/textarea";
@@ -25,7 +25,7 @@ import {
   createWorkoutAction,
   deleteWorkoutAction,
 } from "@/actions/workout";
-//import { generateNoteTitle } from "@/actions/generate-title";
+import { saveWorkoutProgramAction } from "@/actions/workout-program";
 import MicrophoneButton from "./MicrophoneButton";
 import { Button } from "./ui/button";
 import {
@@ -43,8 +43,25 @@ import {
 import { useOptionalWorkoutProfileEditor } from "@/providers/WorkoutProfileEditorProvider";
 import { getWorkoutProgramLogoDefinition } from "@/lib/workout/workoutProgramLogos";
 import { cn } from "@/lib/utils";
+import { PROGRAM_CREATED_MARKER } from "@/lib/workout-program-system-prompt";
+import type { AthleteProfileForPrompt } from "@/lib/workout-program-system-prompt";
 
 const WORKOUT_PRE_CREATE_NOTE_ID_KEY = "otium.workout.preCreateNoteId";
+
+const SAVE_KEYWORDS = ["save", "yes", "ok", "sure", "go ahead", "please save", "save it", "save the program"];
+
+function isSaveIntent(text: string): boolean {
+  const lower = text.toLowerCase().trim();
+  return lower.length < 60 && SAVE_KEYWORDS.some((k) => lower.includes(k));
+}
+
+function extractProgramTitle(content: string): string {
+  const headingMatch = content.match(/^#{1,3}\s+(.+)/m);
+  if (headingMatch?.[1]) return headingMatch[1].trim();
+  const boldMatch = content.match(/\*\*(.+?)\*\*/);
+  if (boldMatch?.[1]) return boldMatch[1].trim();
+  return "My Workout Program";
+}
 
 type Props = {
   noteId: string;
@@ -53,6 +70,7 @@ type Props = {
   feedNotes?: NoteLike[];
   greeting?: string;
   welcomeMessage?: string;
+  athleteProfile?: AthleteProfileForPrompt | null;
 };
 
 export default function WorkoutTextInput({
@@ -62,6 +80,7 @@ export default function WorkoutTextInput({
   feedNotes = [],
   greeting = "What's on your mind?",
   welcomeMessage,
+  athleteProfile,
 }: Props) {
   const search = useSearchParams();
   const router = useRouter();
@@ -84,25 +103,22 @@ export default function WorkoutTextInput({
   const textareaRef = useRef<HTMLTextAreaElement | null>(null);
   const updateTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
-  // Prevent typewriter animation from running during SSR/hydration
   const [isHydrated, setIsHydrated] = useState(false);
   useEffect(() => {
     setIsHydrated(true);
   }, []);
 
-  // Track if user has typed - prevent typewriter from showing again after clearing
   const [hasTyped, setHasTyped] = useState(false);
-
-  // Chat messages for the conversation (user messages + AI responses)
   const [chatMessages, setChatMessages] = useState<NoteLike[]>([]);
-
-  // Track the current noteId to detect when it changes
   const [currentNoteId, setCurrentNoteId] = useState(noteId);
-
-  // Streaming state
   const [isStreaming, setIsStreaming] = useState(false);
   const abortControllerRef = useRef<AbortController | null>(null);
   const streamingMessageIdRef = useRef<string | null>(null);
+
+  // Workout program creation state
+  const [workoutProgramGenerated, setWorkoutProgramGenerated] = useState(false);
+  const [pendingProgramContent, setPendingProgramContent] = useState("");
+  const [isSavingProgram, setIsSavingProgram] = useState(false);
 
   const workoutProfileEditor = useOptionalWorkoutProfileEditor();
   const { Icon: WorkoutProgramProfileIcon } = getWorkoutProgramLogoDefinition(
@@ -112,7 +128,6 @@ export default function WorkoutTextInput({
     useState(false);
   const [workoutAddIconRotating, setWorkoutAddIconRotating] = useState(false);
   const [workoutAddMenuOpen, setWorkoutAddMenuOpen] = useState(false);
-  /** Drives profile → IconXFilled swap; CSS `group-hover` is unreliable with Tailwind v4 named groups (e.g. `group/sidebar-wrapper`). */
   const [workoutAddTriggerHovered, setWorkoutAddTriggerHovered] =
     useState(false);
 
@@ -122,17 +137,14 @@ export default function WorkoutTextInput({
     }
   }, [workoutProgramComposerActive]);
 
-  // Feed scoped to this noteId only
   const userNotes: NoteLike[] = user
     ? feedNotes
     : (guestNotes.filter((n) => n.id === noteId) as NoteLike[]);
 
-  // Check if there's user note content
   const hasUserNoteContent = useMemo(() => {
     return userNotes.length > 0 && userNotes[0]?.text?.trim().length > 0;
   }, [userNotes]);
 
-  // Save chat messages to sessionStorage whenever they change
   useEffect(() => {
     if (
       typeof window !== "undefined" &&
@@ -153,14 +165,14 @@ export default function WorkoutTextInput({
     }
   }, [chatMessages, noteId, currentNoteId]);
 
-  // Handle noteId changes and load appropriate messages
   useEffect(() => {
     if (currentNoteId !== noteId) {
       setChatMessages([]);
       setCurrentNoteId(noteId);
       setHasTyped(false);
+      setWorkoutProgramGenerated(false);
+      setPendingProgramContent("");
 
-      // Stop any ongoing stream
       if (abortControllerRef.current) {
         abortControllerRef.current.abort();
         abortControllerRef.current = null;
@@ -194,8 +206,6 @@ export default function WorkoutTextInput({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [noteId, currentNoteId]);
 
-  // Combine user notes and chat messages, sorted by creation time.
-  // Avoid showing the initial user note twice once chatMessages has it.
   const feed: NoteLike[] = useMemo(() => {
     const chatUserTexts = new Set(
       chatMessages
@@ -213,7 +223,6 @@ export default function WorkoutTextInput({
 
   const hasContent = feed.some((n) => n.text?.trim());
 
-  // Hydrate composer on first load / when URL matches
   useEffect(() => {
     if (
       noteIdParam === noteId &&
@@ -237,7 +246,6 @@ export default function WorkoutTextInput({
     chatMessages.length,
   ]);
 
-  // Auto-resize textarea: grow to N lines, then scroll inside.
   useEffect(() => {
     const textarea = textareaRef.current;
     if (!textarea || typeof window === "undefined") return;
@@ -258,9 +266,6 @@ export default function WorkoutTextInput({
   const upsertGuestNote = async (text: string) => {
     const existing = guestNotes.find((n) => n.id === noteId);
     const title: string | null = null;
-    if (text.trim().length > 20) {
-      //title = await generateNoteTitle(text);
-    }
     if (existing) {
       updateGuestNote(noteId, text, title);
     } else {
@@ -276,13 +281,29 @@ export default function WorkoutTextInput({
     }
   };
 
-  // ---------- Streaming AI response ----------
-  const streamAIResponse = useCallback(
-    async (userMessage: string) => {
-      const aiMessageId = `ai-stream-${Date.now()}`;
-      streamingMessageIdRef.current = aiMessageId;
+  // ---------- Save workout program ----------
+  const handleSaveProgram = useCallback(
+    async (content: string, userText?: string) => {
+      if (!athleteProfile) return;
 
-      // Add loading bubble
+      setIsSavingProgram(true);
+
+      // Add user's save message to chat
+      if (userText) {
+        setChatMessages((prev) => [
+          ...prev,
+          {
+            id: `user-msg-${Date.now()}`,
+            text: userText,
+            createdAt: new Date(),
+            isAI: false,
+          },
+        ]);
+      }
+      setNoteText("");
+
+      // Show loading bubble
+      const aiMessageId = `ai-save-${Date.now()}`;
       setChatMessages((prev) => [
         ...prev,
         {
@@ -294,7 +315,74 @@ export default function WorkoutTextInput({
         },
       ]);
 
-      // Build conversation history for context
+      const title = extractProgramTitle(content);
+      const startDate = new Date();
+      const endDate = new Date();
+      endDate.setDate(endDate.getDate() + athleteProfile.timelineWeeks * 7);
+
+      const result = await saveWorkoutProgramAction({
+        title,
+        content,
+        startDate: startDate.toISOString(),
+        endDate: endDate.toISOString(),
+      });
+
+      setIsSavingProgram(false);
+
+      if (result.errorMessage) {
+        setChatMessages((prev) =>
+          prev.map((m) =>
+            m.id === aiMessageId
+              ? {
+                  ...m,
+                  isLoading: false,
+                  text: `❌ Failed to save: ${result.errorMessage}`,
+                }
+              : m,
+          ),
+        );
+        return;
+      }
+
+      setChatMessages((prev) =>
+        prev.map((m) =>
+          m.id === aiMessageId
+            ? {
+                ...m,
+                isLoading: false,
+                text: `✅ **Workout program saved!** Redirecting to your program page...`,
+              }
+            : m,
+        ),
+      );
+
+      setWorkoutProgramGenerated(false);
+      setPendingProgramContent("");
+
+      setTimeout(() => {
+        router.push("/workout/program");
+      }, 1500);
+    },
+    [athleteProfile, router],
+  );
+
+  // ---------- Streaming AI response ----------
+  const streamAIResponse = useCallback(
+    async (userMessage: string) => {
+      const aiMessageId = `ai-stream-${Date.now()}`;
+      streamingMessageIdRef.current = aiMessageId;
+
+      setChatMessages((prev) => [
+        ...prev,
+        {
+          id: aiMessageId,
+          text: "",
+          createdAt: new Date(),
+          isAI: true,
+          isLoading: true,
+        },
+      ]);
+
       const conversationHistory = chatMessages
         .filter((m) => m.text?.trim() && !m.isLoading)
         .map((m) => ({
@@ -302,7 +390,6 @@ export default function WorkoutTextInput({
           content: m.text,
         }));
 
-      // Also include the first user note if it exists
       if (hasUserNoteContent && userNotes[0]?.text?.trim()) {
         conversationHistory.unshift({
           role: "user" as const,
@@ -310,7 +397,6 @@ export default function WorkoutTextInput({
         });
       }
 
-      // System prompt is injected server-side in the API route
       const messages = [
         ...conversationHistory,
         { role: "user" as const, content: userMessage },
@@ -320,11 +406,22 @@ export default function WorkoutTextInput({
       abortControllerRef.current = controller;
       setIsStreaming(true);
 
+      // Use workout-program prompt type when composer is active and athlete profile exists
+      const promptType =
+        workoutProgramComposerActive && athleteProfile
+          ? "workout-program"
+          : "workout";
+
       try {
         const response = await fetch("/api/chat", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ messages, promptType: "workout" }),
+          body: JSON.stringify({
+            messages,
+            promptType,
+            athleteProfile:
+              promptType === "workout-program" ? athleteProfile : undefined,
+          }),
           signal: controller.signal,
         });
 
@@ -336,7 +433,6 @@ export default function WorkoutTextInput({
         const decoder = new TextDecoder();
         let accumulated = "";
 
-        // Replace loading with empty streaming bubble
         setChatMessages((prev) =>
           prev.map((m) =>
             m.id === aiMessageId ? { ...m, isLoading: false, text: "" } : m,
@@ -350,7 +446,6 @@ export default function WorkoutTextInput({
           const text = decoder.decode(value, { stream: true });
           accumulated += text;
 
-          // Update the AI message with accumulated text
           setChatMessages((prev) =>
             prev.map((m) =>
               m.id === aiMessageId ? { ...m, text: accumulated } : m,
@@ -358,7 +453,6 @@ export default function WorkoutTextInput({
           );
         }
 
-        // Final update
         if (accumulated.trim()) {
           setChatMessages((prev) =>
             prev.map((m) =>
@@ -367,13 +461,20 @@ export default function WorkoutTextInput({
                 : m,
             ),
           );
+
+          // Detect if AI just generated a workout program
+          if (
+            workoutProgramComposerActive &&
+            accumulated.includes(PROGRAM_CREATED_MARKER)
+          ) {
+            setWorkoutProgramGenerated(true);
+            setPendingProgramContent(accumulated.trim());
+          }
         } else {
-          // If no text was received, remove the bubble
           setChatMessages((prev) => prev.filter((m) => m.id !== aiMessageId));
         }
       } catch (error: unknown) {
         if (error instanceof Error && error.name === "AbortError") {
-          // User stopped the stream — keep whatever was accumulated
           setChatMessages((prev) =>
             prev.map((m) =>
               m.id === aiMessageId ? { ...m, isLoading: false } : m,
@@ -381,7 +482,6 @@ export default function WorkoutTextInput({
           );
         } else {
           console.error("Streaming error:", error);
-          // Remove loading bubble and fall back to non-streaming
           setChatMessages((prev) => prev.filter((m) => m.id !== aiMessageId));
           await fallbackNonStreaming();
         }
@@ -390,7 +490,6 @@ export default function WorkoutTextInput({
         abortControllerRef.current = null;
         streamingMessageIdRef.current = null;
 
-        // Focus textarea for follow-up
         setTimeout(() => {
           if (textareaRef.current) {
             textareaRef.current.focus();
@@ -398,7 +497,7 @@ export default function WorkoutTextInput({
         }, 100);
       }
     },
-    [chatMessages, hasUserNoteContent, userNotes],
+    [chatMessages, hasUserNoteContent, userNotes, workoutProgramComposerActive, athleteProfile],
   );
 
   const fallbackNonStreaming = async () => {
@@ -406,14 +505,13 @@ export default function WorkoutTextInput({
       ...prev,
       {
         id: `ai-error-${Date.now()}`,
-        text: "I couldn’t generate a response right now. Try again, or add your goal, available time, and any equipment you have.",
+        text: "I couldn't generate a response right now. Try again, or add your goal, available time, and any equipment you have.",
         createdAt: new Date(),
         isAI: true,
       },
     ]);
   };
 
-  // Stop streaming
   const handleStopStreaming = () => {
     if (abortControllerRef.current) {
       abortControllerRef.current.abort();
@@ -425,9 +523,14 @@ export default function WorkoutTextInput({
     const textToSave = noteText.trim();
     if (!textToSave) return;
 
+    // Intercept save intent when a program has been generated
+    if (workoutProgramGenerated && isSaveIntent(textToSave) && athleteProfile) {
+      await handleSaveProgram(pendingProgramContent, textToSave);
+      return;
+    }
+
     const isFirstMessage = !hasContent;
 
-    // Add user's message to the chat feed immediately
     const userMessageId = `user-msg-${Date.now()}`;
     setChatMessages((prev) => [
       ...prev,
@@ -439,10 +542,8 @@ export default function WorkoutTextInput({
       },
     ]);
 
-    // Clear text immediately
     setNoteText("");
 
-    // Persist the note
     if (isFirstMessage) {
       if (!user) {
         await upsertGuestNote(textToSave);
@@ -478,22 +579,18 @@ export default function WorkoutTextInput({
       }
     }
 
-    // Move shell to top alignment
     const shell = document.getElementById("shell");
     shell?.classList.remove("justify-center");
     shell?.classList.add("justify-start");
 
-    // Refresh to update sidebar (only for authenticated users)
     if (user && isFirstMessage) {
       router.refresh();
     }
 
-    // Reset textarea height
     if (textareaRef.current) {
       textareaRef.current.style.height = "40px";
     }
 
-    // Stream AI response for every message
     await streamAIResponse(textToSave);
   };
 
@@ -505,7 +602,6 @@ export default function WorkoutTextInput({
     }
   };
 
-  // Speech integration
   const handleSpeechTranscript = (transcript: string) => {
     const newText = noteText ? `${noteText} ${transcript}` : transcript;
     setNoteText(newText);
@@ -518,7 +614,6 @@ export default function WorkoutTextInput({
     }
   };
 
-  // ---------- Bubble actions ----------
   const handleCopy = async (text: string) => {
     try {
       await navigator.clipboard.writeText(text);
@@ -551,9 +646,6 @@ export default function WorkoutTextInput({
     setWorkoutAddIconRotating(true);
     setWorkoutProgramComposerActive(true);
     const newId = crypto.randomUUID();
-    // Do NOT pre-create the DB record here — that caused an empty note to appear
-    // in the sidebar before the user typed anything. sendNote (via updateWorkoutAction's
-    // built-in upsert) will create the record on first actual submission.
     router.push(`/workout?noteId=${newId}`);
     window.setTimeout(() => {
       setWorkoutAddIconRotating(false);
@@ -564,6 +656,8 @@ export default function WorkoutTextInput({
     setWorkoutAddTriggerHovered(false);
     setWorkoutProgramComposerActive(false);
     setWorkoutAddMenuOpen(false);
+    setWorkoutProgramGenerated(false);
+    setPendingProgramContent("");
 
     let returnNoteId: string | null = null;
     try {
@@ -591,11 +685,9 @@ export default function WorkoutTextInput({
     "transition-all duration-200 ease-out hover:bg-accent/50 active:scale-95",
   );
 
-  /** Create-workout mode — use real blue: theme `primary` is near-black in :root, not a blue. */
   const addMenuComposerActiveClassName = cn(
     addMenuButtonClassName,
     "shadow-none hover:shadow-none hover:!shadow-none",
-    /* Keep chip when profile icon is shown and when X (cancel) is shown — beat ghost + .theme-toggle-button:hover */
     "bg-blue-500/20 text-blue-700 ring-blue-500/55",
     "hover:!bg-blue-500/30 hover:!text-blue-800 hover:!ring-blue-600/65",
     "dark:bg-blue-400/20 dark:text-blue-300 dark:ring-blue-400/50",
@@ -662,6 +754,9 @@ export default function WorkoutTextInput({
     ],
   );
 
+  // Suppress unused ref warning
+  void updateTimeoutRef;
+
   return (
     <div
       className={`relative mx-auto flex h-full min-h-0 w-full max-w-3xl flex-1 flex-col ${
@@ -691,10 +786,31 @@ export default function WorkoutTextInput({
         </div>
       )}
 
-      {/* Composer — always visible for follow-up questions */}
+      {/* Save program banner — shown when a program has been generated */}
+      {workoutProgramGenerated && !isSavingProgram && (
+        <div className="relative flex w-full items-center px-3.5 pb-0 pt-2">
+          <div className="flex w-full items-center gap-3 rounded-xl border border-green-200 bg-green-50 px-3 py-2 dark:border-green-800 dark:bg-green-950/40">
+            <span className="text-xs text-green-700 dark:text-green-300 flex-1">
+              Program ready — type <strong>save</strong> to save, or ask for changes.
+            </span>
+            <Button
+              size="sm"
+              disabled={isStreaming}
+              className="h-7 gap-1.5 bg-green-600 text-white hover:bg-green-700 dark:bg-green-700 dark:hover:bg-green-600"
+              onClick={() =>
+                handleSaveProgram(pendingProgramContent)
+              }
+            >
+              <Save className="h-3.5 w-3.5" />
+              Save Program
+            </Button>
+          </div>
+        </div>
+      )}
+
+      {/* Composer */}
       <div className="relative flex w-full items-center px-3.5 py-2.5">
         <div className="relative flex w-full max-w-4xl flex-col rounded-2xl border bg-white shadow dark:bg-gray-900">
-          {/* Flex row: + button is a sibling of the textarea column so placeholders never share its layout box */}
           <div className="flex w-full min-h-0 items-center gap-1.5 px-2 pb-2.5 pt-1">
             {workoutProgramComposerActive ? (
               <Button
@@ -748,7 +864,7 @@ export default function WorkoutTextInput({
                 onChange={handleUpdateNote}
                 onKeyDown={handleKeyDown}
                 placeholder=""
-                disabled={isStreaming}
+                disabled={isStreaming || isSavingProgram}
                 className="custom-scrollbar field-sizing-fixed min-h-[48px] w-full resize-none rounded-xl border-0 bg-transparent py-4 pr-28 pl-3 shadow-none focus:ring-0 focus:outline-none focus-visible:ring-0 focus-visible:outline-none"
                 rows={1}
                 style={{ minHeight: 48 }}
@@ -774,7 +890,7 @@ export default function WorkoutTextInput({
                     <NewNoteButton
                       user={user}
                       onSend={sendNote}
-                      disabled={!noteText.trim()}
+                      disabled={!noteText.trim() || isSavingProgram}
                     />
                   </>
                 )}
@@ -806,7 +922,9 @@ export default function WorkoutTextInput({
               {!noteText && hasContent && !isStreaming && (
                 <div className="pointer-events-none absolute inset-0 flex items-start pt-4 pr-28 pl-3">
                   <span className="text-muted-foreground text-base md:text-sm">
-                    Ask a follow-up question...
+                    {workoutProgramGenerated
+                      ? 'Type "save" to save your program, or ask for changes...'
+                      : "Ask a follow-up question..."}
                   </span>
                 </div>
               )}

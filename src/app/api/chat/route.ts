@@ -2,20 +2,36 @@ import { NextRequest } from "next/server";
 import { NEUROSCIENCE_SYSTEM_PROMPT } from "@/lib/neuroscience-system-prompt";
 import { OTIUM_SYSTEM_PROMPT } from "@/lib/otium-system-prompt";
 import { WORKOUT_SYSTEM_PROMPT } from "@/lib/workout-system-prompt";
+import {
+  buildWorkoutProgramSystemPrompt,
+  type AthleteProfileForPrompt,
+} from "@/lib/workout-program-system-prompt";
 import { groqChatStream } from "@/lib/groq";
 
 export const runtime = "nodejs";
 
 export async function POST(req: NextRequest) {
   try {
-    const { messages, promptType } = await req.json();
+    const {
+      messages,
+      promptType,
+      athleteProfile,
+    }: {
+      messages: { role: string; content: string }[];
+      promptType: string;
+      athleteProfile?: AthleteProfileForPrompt;
+    } = await req.json();
 
-    const systemPrompt =
-      promptType === "otium"
-        ? OTIUM_SYSTEM_PROMPT
-        : promptType === "workout"
-          ? WORKOUT_SYSTEM_PROMPT
-          : NEUROSCIENCE_SYSTEM_PROMPT;
+    let systemPrompt: string;
+    if (promptType === "workout-program" && athleteProfile) {
+      systemPrompt = buildWorkoutProgramSystemPrompt(athleteProfile);
+    } else if (promptType === "workout") {
+      systemPrompt = WORKOUT_SYSTEM_PROMPT;
+    } else if (promptType === "otium") {
+      systemPrompt = OTIUM_SYSTEM_PROMPT;
+    } else {
+      systemPrompt = NEUROSCIENCE_SYSTEM_PROMPT;
+    }
 
     // Filter to only user/assistant messages for Gemini history
     const chatMessages = messages.filter(
