@@ -10,7 +10,6 @@ import {
   IconUserCircle,
   IconUserPlus,
 } from "@tabler/icons-react";
-import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { toast } from "sonner";
 import { logOutAction } from "@/actions/users";
@@ -46,8 +45,30 @@ export function NavUser({
   isGuest?: boolean;
 }) {
   const { isMobile } = useSidebar();
-  const router = useRouter();
   const [isLoggingOut, setIsLoggingOut] = React.useState(false);
+
+  const clearLocalConversationCache = React.useCallback(() => {
+    if (typeof window === "undefined") return;
+
+    try {
+      const removablePrefixes = [
+        "ai-greetings-",
+        "chat-neuro-",
+        "chat-workout-",
+      ];
+
+      for (let i = sessionStorage.length - 1; i >= 0; i -= 1) {
+        const key = sessionStorage.key(i);
+        if (!key) continue;
+
+        if (removablePrefixes.some((prefix) => key.startsWith(prefix))) {
+          sessionStorage.removeItem(key);
+        }
+      }
+    } catch {
+      // Ignore storage access failures.
+    }
+  }, []);
 
   const handleSignOut = async () => {
     setIsLoggingOut(true);
@@ -55,14 +76,14 @@ export function NavUser({
     const { errorMessage } = await logOutAction();
 
     if (!errorMessage) {
-      router.push(`/?toastType=logOut`);
+      clearLocalConversationCache();
+      window.location.assign("/?toastType=logOut");
     } else {
       toast("Error", {
         description: errorMessage,
       });
+      setIsLoggingOut(false);
     }
-
-    setIsLoggingOut(false);
   };
 
   return (
@@ -161,7 +182,10 @@ export function NavUser({
                 </DropdownMenuGroup>
                 <DropdownMenuSeparator />
                 <DropdownMenuItem
-                  onClick={handleSignOut}
+                  onSelect={(event) => {
+                    event.preventDefault();
+                    void handleSignOut();
+                  }}
                   disabled={isLoggingOut}
                 >
                   <IconLogout />

@@ -112,7 +112,10 @@ export default function WorkoutTextInput({
 
   const [hasTyped, setHasTyped] = useState(false);
   const [chatMessages, setChatMessages] = useState<NoteLike[]>([]);
+  const authScope = user?.id ?? "guest";
+  const chatStorageKey = `chat-workout-${authScope}-${noteId}`;
   const [currentNoteId, setCurrentNoteId] = useState(noteId);
+  const previousAuthScopeRef = useRef(authScope);
   const [isStreaming, setIsStreaming] = useState(false);
   const abortControllerRef = useRef<AbortController | null>(null);
   const streamingMessageIdRef = useRef<string | null>(null);
@@ -159,13 +162,13 @@ export default function WorkoutTextInput({
         );
         if (messagesToSave.length > 0) {
           const serialized = JSON.stringify(messagesToSave);
-          sessionStorage.setItem(`chat-workout-${noteId}`, serialized);
+          sessionStorage.setItem(chatStorageKey, serialized);
         }
       } catch (error) {
         console.error("Failed to save chat messages to sessionStorage:", error);
       }
     }
-  }, [chatMessages, noteId, currentNoteId]);
+  }, [chatMessages, chatStorageKey, currentNoteId, noteId]);
 
   // Persist full workout chat history to DB for authenticated users
   useEffect(() => {
@@ -204,6 +207,20 @@ export default function WorkoutTextInput({
   ]);
 
   useEffect(() => {
+    if (previousAuthScopeRef.current !== authScope) {
+      previousAuthScopeRef.current = authScope;
+      setChatMessages([]);
+      setIsEditing(false);
+      setHasTyped(false);
+
+      if (abortControllerRef.current) {
+        abortControllerRef.current.abort();
+        abortControllerRef.current = null;
+      }
+      setIsStreaming(false);
+      streamingMessageIdRef.current = null;
+    }
+
     if (currentNoteId !== noteId) {
       setChatMessages([]);
       setCurrentNoteId(noteId);
@@ -219,7 +236,7 @@ export default function WorkoutTextInput({
 
       if (typeof window !== "undefined") {
         try {
-          const stored = sessionStorage.getItem(`chat-workout-${noteId}`);
+          const stored = sessionStorage.getItem(chatStorageKey);
           if (stored) {
             const parsed = JSON.parse(stored);
             if (parsed.length > 0) setChatMessages(parsed);
@@ -236,7 +253,7 @@ export default function WorkoutTextInput({
     } else if (typeof window !== "undefined") {
       if (chatMessages.length === 0) {
         try {
-          const stored = sessionStorage.getItem(`chat-workout-${noteId}`);
+          const stored = sessionStorage.getItem(chatStorageKey);
           if (stored) {
             const parsed = JSON.parse(stored);
             if (parsed.length > 0) setChatMessages(parsed);
@@ -252,7 +269,7 @@ export default function WorkoutTextInput({
       }
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [noteId, currentNoteId, startingChatMessages]);
+  }, [authScope, chatStorageKey, noteId, currentNoteId, startingChatMessages]);
 
   const feed: NoteLike[] = useMemo(() => {
     const chatUserTexts = new Set(

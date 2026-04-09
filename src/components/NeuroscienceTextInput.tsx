@@ -81,9 +81,12 @@ export default function NeuroscienceTextInput({
 
   // Chat messages for the conversation (user messages + AI responses)
   const [chatMessages, setChatMessages] = useState<NoteLike[]>([]);
+  const authScope = user?.id ?? "guest";
+  const chatStorageKey = `chat-neuro-${authScope}-${noteId}`;
 
   // Track the current noteId to detect when it changes
   const [currentNoteId, setCurrentNoteId] = useState(noteId);
+  const previousAuthScopeRef = useRef(authScope);
 
   // Streaming state
   const [isStreaming, setIsStreaming] = useState(false);
@@ -113,13 +116,13 @@ export default function NeuroscienceTextInput({
         );
         if (messagesToSave.length > 0) {
           const serialized = JSON.stringify(messagesToSave);
-          sessionStorage.setItem(`chat-neuro-${noteId}`, serialized);
+          sessionStorage.setItem(chatStorageKey, serialized);
         }
       } catch (error) {
         console.error("Failed to save chat messages to sessionStorage:", error);
       }
     }
-  }, [chatMessages, noteId, currentNoteId]);
+  }, [chatMessages, chatStorageKey, currentNoteId, noteId]);
 
   // Persist chat history to DB for signed-in users
   useEffect(() => {
@@ -159,6 +162,18 @@ export default function NeuroscienceTextInput({
 
   // Handle noteId changes and load appropriate messages
   useEffect(() => {
+    if (previousAuthScopeRef.current !== authScope) {
+      previousAuthScopeRef.current = authScope;
+      setChatMessages([]);
+      setHasTyped(false);
+
+      if (abortControllerRef.current) {
+        abortControllerRef.current.abort();
+        abortControllerRef.current = null;
+      }
+      setIsStreaming(false);
+    }
+
     if (currentNoteId !== noteId) {
       setChatMessages([]);
       setCurrentNoteId(noteId);
@@ -173,7 +188,7 @@ export default function NeuroscienceTextInput({
 
       if (typeof window !== "undefined") {
         try {
-          const stored = sessionStorage.getItem(`chat-neuro-${noteId}`);
+          const stored = sessionStorage.getItem(chatStorageKey);
           if (stored) {
             const parsed = JSON.parse(stored);
             if (parsed.length > 0) setChatMessages(parsed);
@@ -190,7 +205,7 @@ export default function NeuroscienceTextInput({
     } else if (typeof window !== "undefined") {
       if (chatMessages.length === 0) {
         try {
-          const stored = sessionStorage.getItem(`chat-neuro-${noteId}`);
+          const stored = sessionStorage.getItem(chatStorageKey);
           if (stored) {
             const parsed = JSON.parse(stored);
             if (parsed.length > 0) setChatMessages(parsed);
@@ -206,7 +221,7 @@ export default function NeuroscienceTextInput({
       }
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [noteId, currentNoteId, startingChatMessages]);
+  }, [authScope, chatStorageKey, noteId, currentNoteId, startingChatMessages]);
 
   // Combine user notes and chat messages, sorted by creation time.
   // Avoid showing the initial user note twice once chatMessages has it.
