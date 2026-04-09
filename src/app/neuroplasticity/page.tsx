@@ -8,6 +8,35 @@ import { getNeuroscienceGreeting } from "@/lib/neuroscience-greetings-server";
 import { getTimeBasedGreeting } from "@/lib/get-time-based-greeting";
 import { getUserProfile } from "@/lib/user-utils";
 
+type NeuroChatMessage = {
+  id: string;
+  text: string;
+  createdAt: string;
+  isAI?: boolean;
+};
+
+function parsePersistedNeuroMessages(raw: unknown): NeuroChatMessage[] {
+  if (!Array.isArray(raw)) return [];
+
+  const parsed: NeuroChatMessage[] = [];
+  for (const entry of raw) {
+    if (!entry || typeof entry !== "object") continue;
+    const candidate = entry as Record<string, unknown>;
+    if (typeof candidate.id !== "string" || typeof candidate.text !== "string") {
+      continue;
+    }
+    if (typeof candidate.createdAt !== "string") continue;
+
+    parsed.push({
+      id: candidate.id,
+      text: candidate.text,
+      createdAt: candidate.createdAt,
+      isAI: candidate.isAI === true,
+    });
+  }
+  return parsed;
+}
+
 type Props = {
   searchParams?: Promise<Record<string, string | string[] | undefined>>;
 };
@@ -38,11 +67,11 @@ export default async function NeuroplasticityPage({ searchParams }: Props) {
     redirect(`/neuroplasticity?noteId=${newId}`);
   }
 
-  let note: { text: string } | null = null;
+  let note: { text: string; chatMessages: unknown } | null = null;
   if (user) {
     note = await prisma.neuroscience.findFirst({
       where: { id: noteId, authorId: user.id },
-      select: { text: true },
+      select: { text: true, chatMessages: true },
     });
   }
 
@@ -69,6 +98,7 @@ export default async function NeuroplasticityPage({ searchParams }: Props) {
           <NeuroscienceTextInput
             noteId={noteId}
             startingNoteText={note?.text || ""}
+            startingChatMessages={parsePersistedNeuroMessages(note?.chatMessages)}
             user={user}
             feedNotes={feedNotes}
             greeting={greeting}

@@ -6,6 +6,31 @@ import HomeToaster from "@/components/HomeToaster";
 import NoteTextInput from "@/components/NoteTextInput";
 import { getServerSideGreeting } from "@/lib/greetings-server";
 
+type PersistedChatMessage = {
+  id: string;
+  text: string;
+  createdAt: string;
+  isAI?: boolean;
+};
+
+function parsePersistedMessages(raw: unknown): PersistedChatMessage[] {
+  if (!Array.isArray(raw)) return [];
+  const parsed: PersistedChatMessage[] = [];
+  for (const entry of raw) {
+    if (!entry || typeof entry !== "object") continue;
+    const candidate = entry as Record<string, unknown>;
+    if (typeof candidate.id !== "string" || typeof candidate.text !== "string") continue;
+    if (typeof candidate.createdAt !== "string") continue;
+    parsed.push({
+      id: candidate.id,
+      text: candidate.text,
+      createdAt: candidate.createdAt,
+      isAI: candidate.isAI === true,
+    });
+  }
+  return parsed;
+}
+
 type Props = {
   searchParams?: Promise<Record<string, string | string[] | undefined>>;
 };
@@ -27,11 +52,11 @@ export default async function HomePage({ searchParams }: Props) {
   }
 
   // Load current note text if signed in
-  let note: { text: string } | null = null;
+  let note: { text: string; chatMessages: unknown } | null = null;
   if (user) {
     note = await prisma.note.findFirst({
       where: { id: noteId, authorId: user.id },
-      select: { text: true },
+      select: { text: true, chatMessages: true },
     });
   }
 
@@ -59,6 +84,7 @@ export default async function HomePage({ searchParams }: Props) {
           <NoteTextInput
             noteId={noteId}
             startingNoteText={note?.text || ""}
+            startingChatMessages={parsePersistedMessages(note?.chatMessages)}
             user={user}
             feedNotes={feedNotes}
             greeting={greeting}

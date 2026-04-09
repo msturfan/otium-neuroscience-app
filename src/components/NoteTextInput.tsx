@@ -29,6 +29,7 @@ import {
 type Props = {
   noteId: string;
   startingNoteText: string;
+  startingChatMessages?: NoteLike[];
   user: User | null;
   feedNotes?: NoteLike[];
   greeting?: string;
@@ -38,6 +39,7 @@ type Props = {
 export default function NoteTextInput({
   noteId,
   startingNoteText,
+  startingChatMessages = [],
   user,
   feedNotes = [],
   greeting = "What's on your mind?",
@@ -126,6 +128,49 @@ export default function NoteTextInput({
     }
   }, [aiGreetings, noteId, currentNoteId]);
 
+  // Persist full chat history to DB for authenticated users
+  useEffect(() => {
+    if (
+      !user ||
+      isStreaming ||
+      isGeneratingGreeting ||
+      currentNoteId !== noteId ||
+      aiGreetings.length === 0
+    ) {
+      return;
+    }
+
+    const messagesToPersist = aiGreetings
+      .filter((m) => !m.isLoading && m.text?.trim())
+      .map((m) => ({
+        id: m.id,
+        text: m.text.trim(),
+        createdAt: new Date(m.createdAt).toISOString(),
+        isAI: m.isAI === true,
+      }));
+
+    if (messagesToPersist.length === 0) return;
+
+    const firstUserMessage =
+      messagesToPersist.find((m) => !m.isAI)?.text ?? startingNoteText.trim();
+
+    if (!firstUserMessage) return;
+
+    const timeout = setTimeout(() => {
+      void updateNoteAction(noteId, firstUserMessage, messagesToPersist);
+    }, 500);
+
+    return () => clearTimeout(timeout);
+  }, [
+    user,
+    isStreaming,
+    isGeneratingGreeting,
+    currentNoteId,
+    noteId,
+    aiGreetings,
+    startingNoteText,
+  ]);
+
   // Handle noteId changes and load appropriate greetings
   useEffect(() => {
     // Check if we've switched to a different note
@@ -156,12 +201,17 @@ export default function NoteTextInput({
             if (parsed.length > 0) {
               setAiGreetings(parsed);
             }
+          } else if (startingChatMessages.length > 0) {
+            setAiGreetings(startingChatMessages);
           }
         } catch (error) {
           console.error(
             "Failed to reload AI greetings from sessionStorage:",
             error,
           );
+          if (startingChatMessages.length > 0) {
+            setAiGreetings(startingChatMessages);
+          }
         }
       }
     } else if (typeof window !== "undefined") {
@@ -174,17 +224,22 @@ export default function NoteTextInput({
             if (parsed.length > 0) {
               setAiGreetings(parsed);
             }
+          } else if (startingChatMessages.length > 0) {
+            setAiGreetings(startingChatMessages);
           }
         } catch (error) {
           console.error(
             "Failed to reload AI greetings from sessionStorage:",
             error,
           );
+          if (startingChatMessages.length > 0) {
+            setAiGreetings(startingChatMessages);
+          }
         }
       }
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [noteId, hasUserNoteContent, currentNoteId]);
+  }, [noteId, hasUserNoteContent, currentNoteId, startingChatMessages]);
 
   // Combine persisted user note + local AI/user transient messages, sorted by creation time.
   // Avoid showing the same user note twice once we have a local optimistic user bubble.

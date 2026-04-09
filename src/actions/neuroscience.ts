@@ -5,6 +5,13 @@ import { prisma } from "@/db/prisma";
 import { handleError } from "@/lib/utils";
 import { generateNoteTitle } from "./generate-title";
 
+type PersistedChatMessage = {
+  id: string;
+  text: string;
+  createdAt: string;
+  isAI?: boolean;
+};
+
 export async function createNeuroscienceAction(id?: string) {
   const user = await getUser();
   if (!user) return { errorMessage: "Not signed in" };
@@ -13,7 +20,13 @@ export async function createNeuroscienceAction(id?: string) {
 
   try {
     await prisma.neuroscience.create({
-      data: { id: noteId, authorId: user.id, text: "", token: crypto.randomUUID() },
+      data: {
+        id: noteId,
+        authorId: user.id,
+        text: "",
+        chatMessages: [],
+        token: crypto.randomUUID(),
+      },
     });
     return { id: noteId };
   } catch (e) {
@@ -21,7 +34,11 @@ export async function createNeuroscienceAction(id?: string) {
   }
 }
 
-export async function updateNeuroscienceAction(id: string, text: string) {
+export async function updateNeuroscienceAction(
+  id: string,
+  text: string,
+  chatMessages?: PersistedChatMessage[],
+) {
   const user = await getUser();
   if (!user) return { errorMessage: "Not signed in" };
 
@@ -33,7 +50,10 @@ export async function updateNeuroscienceAction(id: string, text: string) {
 
     const result = await prisma.neuroscience.updateMany({
       where: { id, authorId: user.id },
-      data: { text },
+      data: {
+        text,
+        ...(chatMessages ? { chatMessages } : {}),
+      },
     });
 
     if (result.count === 0) {
@@ -42,13 +62,17 @@ export async function updateNeuroscienceAction(id: string, text: string) {
           id,
           authorId: user.id,
           text,
+          chatMessages: chatMessages ?? [],
           token: crypto.randomUUID(),
           title: null,
         },
       });
     }
 
-    const needsTitle = !existingNote?.title && text.trim().length > 20;
+    const needsTitle =
+      !existingNote?.title &&
+      existingNote?.text !== text &&
+      text.trim().length > 20;
     if (needsTitle) {
       generateNoteTitle(text)
         .then((title) => {

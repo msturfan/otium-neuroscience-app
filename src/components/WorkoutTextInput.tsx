@@ -66,6 +66,7 @@ function extractProgramTitle(content: string): string {
 type Props = {
   noteId: string;
   startingNoteText: string;
+  startingChatMessages?: NoteLike[];
   user: User | null;
   feedNotes?: NoteLike[];
   greeting?: string;
@@ -76,6 +77,7 @@ type Props = {
 export default function WorkoutTextInput({
   noteId,
   startingNoteText,
+  startingChatMessages = [],
   user,
   feedNotes = [],
   greeting = "What's on your mind?",
@@ -165,6 +167,42 @@ export default function WorkoutTextInput({
     }
   }, [chatMessages, noteId, currentNoteId]);
 
+  // Persist full workout chat history to DB for authenticated users
+  useEffect(() => {
+    if (!user || isStreaming || currentNoteId !== noteId || chatMessages.length === 0) {
+      return;
+    }
+
+    const messagesToPersist = chatMessages
+      .filter((m) => !m.isLoading && m.text?.trim())
+      .map((m) => ({
+        id: m.id,
+        text: m.text.trim(),
+        createdAt: new Date(m.createdAt).toISOString(),
+        isAI: m.isAI === true,
+      }));
+
+    if (messagesToPersist.length === 0) return;
+
+    const firstUserMessage =
+      messagesToPersist.find((m) => !m.isAI)?.text ?? startingNoteText.trim();
+
+    if (!firstUserMessage) return;
+
+    const timeout = setTimeout(() => {
+      void updateWorkoutAction(noteId, firstUserMessage, messagesToPersist);
+    }, 500);
+
+    return () => clearTimeout(timeout);
+  }, [
+    user,
+    isStreaming,
+    currentNoteId,
+    noteId,
+    chatMessages,
+    startingNoteText,
+  ]);
+
   useEffect(() => {
     if (currentNoteId !== noteId) {
       setChatMessages([]);
@@ -185,9 +223,14 @@ export default function WorkoutTextInput({
           if (stored) {
             const parsed = JSON.parse(stored);
             if (parsed.length > 0) setChatMessages(parsed);
+          } else if (startingChatMessages.length > 0) {
+            setChatMessages(startingChatMessages);
           }
         } catch (error) {
           console.error("Failed to reload chat messages:", error);
+          if (startingChatMessages.length > 0) {
+            setChatMessages(startingChatMessages);
+          }
         }
       }
     } else if (typeof window !== "undefined") {
@@ -197,14 +240,19 @@ export default function WorkoutTextInput({
           if (stored) {
             const parsed = JSON.parse(stored);
             if (parsed.length > 0) setChatMessages(parsed);
+          } else if (startingChatMessages.length > 0) {
+            setChatMessages(startingChatMessages);
           }
         } catch (error) {
           console.error("Failed to reload chat messages:", error);
+          if (startingChatMessages.length > 0) {
+            setChatMessages(startingChatMessages);
+          }
         }
       }
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [noteId, currentNoteId]);
+  }, [noteId, currentNoteId, startingChatMessages]);
 
   const feed: NoteLike[] = useMemo(() => {
     const chatUserTexts = new Set(

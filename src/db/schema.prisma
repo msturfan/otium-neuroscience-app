@@ -10,6 +10,7 @@ datasource db {
 model Note {
   id        String   @id @default(uuid())
   text      String
+  chatMessages Json?
   token     String   @unique @default(uuid())
   authorId  String
   createdAt DateTime @default(now())
@@ -121,6 +122,7 @@ model SecurityAuditLog {
 model Neuroscience {
   id        String   @id
   text      String
+  chatMessages Json?
   token     String   @unique(map: "Neuroscience_token_idx")
   authorId  String
   createdAt DateTime @default(now())
@@ -132,6 +134,7 @@ model Neuroscience {
 model Workout {
   id        String   @id
   text      String
+  chatMessages Json?
   token     String   @unique(map: "Workout_token_idx")
   authorId  String
   createdAt DateTime @default(now())
