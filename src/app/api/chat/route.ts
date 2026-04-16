@@ -1,4 +1,5 @@
 import { NextRequest } from "next/server";
+import { createGroqChatSseStream } from "@/lib/chat-sse-stream";
 import { NEUROSCIENCE_SYSTEM_PROMPT } from "@/lib/neuroscience-system-prompt";
 import { OTIUM_SYSTEM_PROMPT } from "@/lib/otium-system-prompt";
 import { WORKOUT_SYSTEM_PROMPT } from "@/lib/workout-system-prompt";
@@ -16,10 +17,12 @@ export async function POST(req: NextRequest) {
       messages,
       promptType,
       athleteProfile,
+      streamFormat,
     }: {
       messages: { role: string; content: string }[];
       promptType: string;
       athleteProfile?: AthleteProfileForPrompt;
+      streamFormat?: string;
     } = await req.json();
 
     let systemPrompt: string;
@@ -37,6 +40,22 @@ export async function POST(req: NextRequest) {
     const chatMessages = messages.filter(
       (m: { role: string }) => m.role === "user" || m.role === "assistant",
     );
+
+    if (streamFormat === "sse") {
+      const sseBody = createGroqChatSseStream(
+        systemPrompt,
+        chatMessages,
+        req.signal,
+      );
+      return new Response(sseBody, {
+        headers: {
+          "Content-Type": "text/event-stream; charset=utf-8",
+          "Cache-Control": "no-cache, no-transform",
+          Connection: "keep-alive",
+          "X-Accel-Buffering": "no",
+        },
+      });
+    }
 
     const stream = await groqChatStream(systemPrompt, chatMessages);
 

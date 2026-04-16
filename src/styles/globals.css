@@ -494,3 +494,23 @@
 .sidebar-trigger-button:active::before {
   animation: sidebar-trigger-ripple 0.6s cubic-bezier(0.4, 0, 0.2, 1);
 }
+
+@keyframes chat-thinking-pulse {
+  0%,
+  100% {
+    opacity: 0.55;
+  }
+  50% {
+    opacity: 1;
+  }
+}
+
+.chat-thinking-title {
+  animation: chat-thinking-pulse 1.6s ease-in-out infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .chat-thinking-title {
+    animation: none;
+  }
+}

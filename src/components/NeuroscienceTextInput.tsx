@@ -29,6 +29,10 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import { NOTE_PERSISTED_EVENT } from "@/components/nav-actions";
+import {
+  consumeChatSseBody,
+  sseSnapshotToBubblePatch,
+} from "@/lib/chat-sse-client";
 
 type Props = {
   noteId: string;
@@ -311,7 +315,6 @@ export default function NeuroscienceTextInput({
       const aiMessageId = `ai-stream-${Date.now()}`;
       streamingMessageIdRef.current = aiMessageId;
 
-      // Add loading bubble
       setChatMessages((prev) => [
         ...prev,
         {
@@ -320,6 +323,8 @@ export default function NeuroscienceTextInput({
           createdAt: new Date(),
           isAI: true,
           isLoading: true,
+          streamUserPrompt: userMessage,
+          streamStartedAt: new Date().toISOString(),
         },
       ]);
 
@@ -349,11 +354,13 @@ export default function NeuroscienceTextInput({
       abortControllerRef.current = controller;
       setIsStreaming(true);
 
+      const answerAccumulator = { current: "" };
+
       try {
         const response = await fetch("/api/chat", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ messages }),
+          body: JSON.stringify({ messages, streamFormat: "sse" }),
           signal: controller.signal,
         });
 
@@ -362,50 +369,95 @@ export default function NeuroscienceTextInput({
         }
 
         const reader = response.body.getReader();
-        const decoder = new TextDecoder();
-        let accumulated = "";
+        answerAccumulator.current = "";
 
-        // Replace loading with empty streaming bubble
         setChatMessages((prev) =>
           prev.map((m) =>
             m.id === aiMessageId ? { ...m, isLoading: false, text: "" } : m,
           ),
         );
 
-        while (true) {
-          const { done, value } = await reader.read();
-          if (done) break;
+        let shouldFallbackAfterSseError = false;
 
-          const text = decoder.decode(value, { stream: true });
-          accumulated += text;
-
-          // Update the AI message with accumulated text
-          setChatMessages((prev) =>
-            prev.map((m) =>
-              m.id === aiMessageId ? { ...m, text: accumulated } : m,
-            ),
-          );
+        try {
+          await consumeChatSseBody(reader, {
+            throttleMs: 50,
+            onSnapshot: (snap) => {
+              answerAccumulator.current = snap.answer;
+              const patch = sseSnapshotToBubblePatch(snap);
+              if (patch === null) {
+                setChatMessages((prev) =>
+                  prev.filter((m) => m.id !== aiMessageId),
+                );
+                if (
+                  snap.terminal === "failed" &&
+                  snap.failureCode !== "aborted"
+                ) {
+                  shouldFallbackAfterSseError = true;
+                }
+                return;
+              }
+              setChatMessages((prev) =>
+                prev.map((m) =>
+                  m.id === aiMessageId ? { ...m, ...patch } : m,
+                ),
+              );
+            },
+          });
+        } catch (readErr: unknown) {
+          if (
+            readErr instanceof DOMException &&
+            readErr.name === "AbortError"
+          ) {
+            const t = answerAccumulator.current.trim();
+            setChatMessages((prev) =>
+              prev.map((m) =>
+                m.id === aiMessageId
+                  ? {
+                      ...m,
+                      isLoading: false,
+                      text: t || m.text,
+                      streamStatusLabel: undefined,
+                      streamSteps: undefined,
+                      streamActivityLines: undefined,
+                      streamError: undefined,
+                      streamTerminal: undefined,
+                      streamUserPrompt: undefined,
+                      streamStartedAt: undefined,
+                      streamEndedAt: undefined,
+                    }
+                  : m,
+              ),
+            );
+          } else {
+            throw readErr;
+          }
         }
 
-        // Final update
-        if (accumulated.trim()) {
+        if (shouldFallbackAfterSseError) {
+          await fallbackNonStreaming();
+        }
+      } catch (error: unknown) {
+        const isAbort =
+          (error instanceof DOMException && error.name === "AbortError") ||
+          (error instanceof Error && error.name === "AbortError");
+        if (isAbort) {
           setChatMessages((prev) =>
             prev.map((m) =>
               m.id === aiMessageId
-                ? { ...m, text: accumulated.trim(), isLoading: false }
+                ? {
+                    ...m,
+                    isLoading: false,
+                    streamStatusLabel: undefined,
+                    streamSteps: undefined,
+                    streamActivityLines: undefined,
+                    streamError: undefined,
+                    streamTerminal: undefined,
+                    streamUserPrompt: undefined,
+                    streamStartedAt: undefined,
+                    streamEndedAt: undefined,
+                  }
                 : m,
-            ),
-          );
-        } else {
-          // If no text was received, remove the bubble
-          setChatMessages((prev) => prev.filter((m) => m.id !== aiMessageId));
-        }
-      } catch (error: unknown) {
-        if (error instanceof Error && error.name === "AbortError") {
-          // User stopped the stream — keep whatever was accumulated
-          setChatMessages((prev) =>
-            prev.map((m) =>
-              m.id === aiMessageId ? { ...m, isLoading: false } : m,
             ),
           );
         } else {

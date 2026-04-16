@@ -45,6 +45,10 @@ import { getWorkoutProgramLogoDefinition } from "@/lib/workout/workoutProgramLog
 import { cn } from "@/lib/utils";
 import { PROGRAM_CREATED_MARKER } from "@/lib/workout-program-system-prompt";
 import type { AthleteProfileForPrompt } from "@/lib/workout-program-system-prompt";
+import {
+  consumeChatSseBody,
+  sseSnapshotToBubblePatch,
+} from "@/lib/chat-sse-client";
 
 const WORKOUT_PRE_CREATE_NOTE_ID_KEY = "otium.workout.preCreateNoteId";
 
@@ -445,6 +449,8 @@ export default function WorkoutTextInput({
           createdAt: new Date(),
           isAI: true,
           isLoading: true,
+          streamUserPrompt: userMessage,
+          streamStartedAt: new Date().toISOString(),
         },
       ]);
 
@@ -477,6 +483,8 @@ export default function WorkoutTextInput({
           ? "workout-program"
           : "workout";
 
+      const answerAccumulator = { current: "" };
+
       try {
         const response = await fetch("/api/chat", {
           method: "POST",
@@ -486,6 +494,7 @@ export default function WorkoutTextInput({
             promptType,
             athleteProfile:
               promptType === "workout-program" ? athleteProfile : undefined,
+            streamFormat: "sse",
           }),
           signal: controller.signal,
         });
@@ -495,8 +504,7 @@ export default function WorkoutTextInput({
         }
 
         const reader = response.body.getReader();
-        const decoder = new TextDecoder();
-        let accumulated = "";
+        answerAccumulator.current = "";
 
         setChatMessages((prev) =>
           prev.map((m) =>
@@ -504,45 +512,96 @@ export default function WorkoutTextInput({
           ),
         );
 
-        while (true) {
-          const { done, value } = await reader.read();
-          if (done) break;
+        let shouldFallbackAfterSseError = false;
 
-          const text = decoder.decode(value, { stream: true });
-          accumulated += text;
+        try {
+          await consumeChatSseBody(reader, {
+            throttleMs: 50,
+            onSnapshot: (snap) => {
+              answerAccumulator.current = snap.answer;
+              const patch = sseSnapshotToBubblePatch(snap);
+              if (patch === null) {
+                setChatMessages((prev) =>
+                  prev.filter((m) => m.id !== aiMessageId),
+                );
+                if (
+                  snap.terminal === "failed" &&
+                  snap.failureCode !== "aborted"
+                ) {
+                  shouldFallbackAfterSseError = true;
+                }
+                return;
+              }
+              setChatMessages((prev) =>
+                prev.map((m) =>
+                  m.id === aiMessageId ? { ...m, ...patch } : m,
+                ),
+              );
 
-          setChatMessages((prev) =>
-            prev.map((m) =>
-              m.id === aiMessageId ? { ...m, text: accumulated } : m,
-            ),
-          );
+              if (
+                snap.terminal === "completed" &&
+                workoutProgramComposerActive &&
+                snap.answer.includes(PROGRAM_CREATED_MARKER)
+              ) {
+                setWorkoutProgramGenerated(true);
+                setPendingProgramContent(snap.answer.trim());
+              }
+            },
+          });
+        } catch (readErr: unknown) {
+          if (
+            readErr instanceof DOMException &&
+            readErr.name === "AbortError"
+          ) {
+            const t = answerAccumulator.current.trim();
+            setChatMessages((prev) =>
+              prev.map((m) =>
+                m.id === aiMessageId
+                  ? {
+                      ...m,
+                      isLoading: false,
+                      text: t || m.text,
+                      streamStatusLabel: undefined,
+                      streamSteps: undefined,
+                      streamActivityLines: undefined,
+                      streamError: undefined,
+                      streamTerminal: undefined,
+                      streamUserPrompt: undefined,
+                      streamStartedAt: undefined,
+                      streamEndedAt: undefined,
+                    }
+                  : m,
+              ),
+            );
+          } else {
+            throw readErr;
+          }
         }
 
-        if (accumulated.trim()) {
+        if (shouldFallbackAfterSseError) {
+          await fallbackNonStreaming();
+        }
+      } catch (error: unknown) {
+        const isAbort =
+          (error instanceof DOMException && error.name === "AbortError") ||
+          (error instanceof Error && error.name === "AbortError");
+        if (isAbort) {
           setChatMessages((prev) =>
             prev.map((m) =>
               m.id === aiMessageId
-                ? { ...m, text: accumulated.trim(), isLoading: false }
+                ? {
+                    ...m,
+                    isLoading: false,
+                    streamStatusLabel: undefined,
+                    streamSteps: undefined,
+                    streamActivityLines: undefined,
+                    streamError: undefined,
+                    streamTerminal: undefined,
+                    streamUserPrompt: undefined,
+                    streamStartedAt: undefined,
+                    streamEndedAt: undefined,
+                  }
                 : m,
-            ),
-          );
-
-          // Detect if AI just generated a workout program
-          if (
-            workoutProgramComposerActive &&
-            accumulated.includes(PROGRAM_CREATED_MARKER)
-          ) {
-            setWorkoutProgramGenerated(true);
-            setPendingProgramContent(accumulated.trim());
-          }
-        } else {
-          setChatMessages((prev) => prev.filter((m) => m.id !== aiMessageId));
-        }
-      } catch (error: unknown) {
-        if (error instanceof Error && error.name === "AbortError") {
-          setChatMessages((prev) =>
-            prev.map((m) =>
-              m.id === aiMessageId ? { ...m, isLoading: false } : m,
             ),
           );
         } else {
