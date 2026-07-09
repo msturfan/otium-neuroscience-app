@@ -24,7 +24,7 @@ const MicrophoneButton: React.FC<MicrophoneButtonProps> = ({
 
   useEffect(() => {
     // Check if MediaRecorder is supported
-    if (typeof window !== "undefined" && navigator.mediaDevices?.getUserMedia) {
+    if (typeof window !== "undefined" && typeof navigator.mediaDevices?.getUserMedia === "function") {
       setIsSupported(true);
     }
 
