@@ -65,8 +65,6 @@ export default function TurnstileCaptcha({
       "expired-callback": onExpire,
       theme: "auto",
       size: "normal",
-      // Refresh token automatically before expiration (5 minutes)
-      "refresh-expired": "auto",
     });
   }, [onVerify, onError, onExpire]);
 
