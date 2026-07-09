@@ -57,29 +57,35 @@ export function NavMain({
     }
   };
 
-  const hideInbox =
-    pathname.startsWith("/neuroplasticity") || pathname.startsWith("/workout");
-  const navItems = hideInbox ? items.filter((item) => item.url !== "/inbox") : items;
+  const isWorkoutRoute = pathname.startsWith("/workout");
+  const hideInbox = pathname.startsWith("/neuroplasticity") || isWorkoutRoute;
+  const navItems = items.filter((item) => {
+    if (hideInbox && item.url === "/inbox") return false;
+    if (item.title === "Workout Program" && !isWorkoutRoute) return false;
+    return true;
+  });
 
   return (
-    <SidebarMenu>
-      {navItems.map((item) => (
-        <SidebarMenuItem key={item.title}>
-          <SidebarMenuButton asChild isActive={isItemActive(item.url, item.title)}>
-            {item.title === "New Chat" ? (
-              <a href={item.url} onClick={handleNewNoteClick}>
-                <item.icon />
-                <span>{item.title}</span>
-              </a>
-            ) : (
-              <a href={item.url}>
-                <item.icon />
-                <span>{item.title}</span>
-              </a>
-            )}
-          </SidebarMenuButton>
-        </SidebarMenuItem>
-      ))}
-    </SidebarMenu>
+    <>
+      <SidebarMenu>
+        {navItems.map((item) => (
+          <SidebarMenuItem key={item.title}>
+            <SidebarMenuButton asChild isActive={isItemActive(item.url, item.title)}>
+              {item.title === "New Chat" ? (
+                <a href={item.url} onClick={handleNewNoteClick}>
+                  <item.icon />
+                  <span>{item.title}</span>
+                </a>
+              ) : (
+                <a href={item.url}>
+                  <item.icon />
+                  <span>{item.title}</span>
+                </a>
+              )}
+            </SidebarMenuButton>
+          </SidebarMenuItem>
+        ))}
+      </SidebarMenu>
+    </>
   );
 }

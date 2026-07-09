@@ -9,6 +9,31 @@ import { getWorkoutGreeting } from "@/lib/workout-greetings-server";
 import { getTimeBasedGreeting } from "@/lib/get-time-based-greeting";
 import { getUserProfile } from "@/lib/user-utils";
 
+type PersistedChatMessage = {
+  id: string;
+  text: string;
+  createdAt: string;
+  isAI?: boolean;
+};
+
+function parsePersistedMessages(raw: unknown): PersistedChatMessage[] {
+  if (!Array.isArray(raw)) return [];
+  const parsed: PersistedChatMessage[] = [];
+  for (const entry of raw) {
+    if (!entry || typeof entry !== "object") continue;
+    const candidate = entry as Record<string, unknown>;
+    if (typeof candidate.id !== "string" || typeof candidate.text !== "string") continue;
+    if (typeof candidate.createdAt !== "string") continue;
+    parsed.push({
+      id: candidate.id,
+      text: candidate.text,
+      createdAt: candidate.createdAt,
+      isAI: candidate.isAI === true,
+    });
+  }
+  return parsed;
+}
+
 type Props = {
   searchParams?: Promise<Record<string, string | string[] | undefined>>;
 };
@@ -40,13 +65,21 @@ export default async function WorkoutPage({ searchParams }: Props) {
 
   const workoutProfile = await prisma.workoutProfile.findUnique({
     where: { userId: user.id },
-    select: { id: true },
+    select: {
+      id: true,
+      goal: true,
+      trainingHistoryLevel: true,
+      gymDaysPerWeek: true,
+      timelineWeeks: true,
+      lifestyleConstraints: true,
+      nutritionBaseline: true,
+    },
   });
 
-  let note: { text: string } | null = null;
+  let note: { text: string; chatMessages: unknown } | null = null;
   note = await prisma.workout.findFirst({
     where: { id: noteId, authorId: user.id },
-    select: { text: true },
+    select: { text: true, chatMessages: true },
   });
 
   const feedNotes = await prisma.workout.findMany({
@@ -71,10 +104,23 @@ export default async function WorkoutPage({ searchParams }: Props) {
             <WorkoutTextInput
               noteId={noteId}
               startingNoteText={note?.text || ""}
+              startingChatMessages={parsePersistedMessages(note?.chatMessages)}
               user={user}
               feedNotes={feedNotes}
               greeting={greeting}
               welcomeMessage={`${timeBasedGreeting}, ${userName}!`}
+              athleteProfile={
+                workoutProfile
+                  ? {
+                      goal: workoutProfile.goal,
+                      trainingHistoryLevel: workoutProfile.trainingHistoryLevel,
+                      gymDaysPerWeek: workoutProfile.gymDaysPerWeek,
+                      timelineWeeks: workoutProfile.timelineWeeks,
+                      lifestyleConstraints: workoutProfile.lifestyleConstraints,
+                      nutritionBaseline: workoutProfile.nutritionBaseline,
+                    }
+                  : null
+              }
             />
           </div>
           <HomeToaster />

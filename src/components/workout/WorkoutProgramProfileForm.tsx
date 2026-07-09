@@ -8,7 +8,6 @@ import {
   useCallback,
 } from "react";
 import { toast } from "sonner";
-import { Dumbbell } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -33,6 +32,8 @@ import {
   type WorkoutProgramProfile,
 } from "@/lib/types/workout";
 import { useWorkoutProfileEditor } from "@/providers/WorkoutProfileEditorProvider";
+import { WorkoutProgramLogoPicker } from "@/components/workout/WorkoutProgramLogoPicker";
+import type { WorkoutProgramLogoId } from "@/lib/workout/workoutProgramLogos";
 
 type Props = {
   onComplete: () => void;
@@ -42,6 +43,8 @@ type Props = {
 };
 
 type FieldErrors = Partial<Record<keyof WorkoutProgramProfile, string>>;
+
+const requiredMarkClassName = "text-primary/70";
 
 export default function WorkoutProgramProfileForm({
   onComplete,
@@ -53,7 +56,8 @@ export default function WorkoutProgramProfileForm({
   const [formData, setFormData] = useState<WorkoutProgramProfile>(initialData);
   const [errors, setErrors] = useState<FieldErrors>({});
   const [isPending, startTransition] = useTransition();
-  const { setWorkoutProfileFormOpen } = useWorkoutProfileEditor();
+  const { setWorkoutProfileFormOpen, workoutProgramLogoId, setWorkoutProgramLogoId } =
+    useWorkoutProfileEditor();
 
   useEffect(() => {
     setWorkoutProfileFormOpen(true);
@@ -120,6 +124,7 @@ export default function WorkoutProgramProfileForm({
     } else {
       setFormData({ ...DEFAULT_WORKOUT_PROFILE });
       setErrors({});
+      onCancel?.();
     }
   }, [mode, onCancel]);
 
@@ -131,7 +136,10 @@ export default function WorkoutProgramProfileForm({
   return (
     <div className="mx-auto flex w-full max-w-2xl flex-col items-center px-4 py-10">
       <div className="mb-6 flex flex-col items-center text-center">
-        <Dumbbell className="mb-2 h-8 w-8 text-foreground" />
+        <WorkoutProgramLogoPicker
+          value={workoutProgramLogoId}
+          onChange={(id: WorkoutProgramLogoId) => setWorkoutProgramLogoId(id)}
+        />
         <h1 className="text-xl font-semibold tracking-tight">
           {mode === "edit"
             ? "Edit your workout program"
@@ -148,7 +156,7 @@ export default function WorkoutProgramProfileForm({
         {/* Goal */}
         <div className="space-y-1.5">
           <Label htmlFor="goal">
-            Goal <span className="text-destructive">*</span>
+            Goal <span className={requiredMarkClassName}>*</span>
           </Label>
           <Input
             id="goal"
@@ -172,7 +180,7 @@ export default function WorkoutProgramProfileForm({
         {/* Training History Level */}
         <div className="space-y-1.5">
           <Label htmlFor="trainingHistoryLevel">
-            Training history level <span className="text-destructive">*</span>
+            Training history level <span className={requiredMarkClassName}>*</span>
           </Label>
           <div className="flex gap-2">
             {TRAINING_LEVELS.map((level) => (
@@ -207,7 +215,7 @@ export default function WorkoutProgramProfileForm({
         <div className="grid grid-cols-2 gap-4">
           <div className="space-y-1.5">
             <Label htmlFor="gymDaysPerWeek">
-              Gym days per week <span className="text-destructive">*</span>
+              Gym days per week <span className={requiredMarkClassName}>*</span>
             </Label>
             <Select
               value={String(formData.gymDaysPerWeek)}
@@ -239,7 +247,7 @@ export default function WorkoutProgramProfileForm({
 
           <div className="space-y-1.5">
             <Label htmlFor="timelineWeeks">
-              Timeline <span className="text-destructive">*</span>
+              Timeline <span className={requiredMarkClassName}>*</span>
             </Label>
             <Select
               value={String(formData.timelineWeeks)}

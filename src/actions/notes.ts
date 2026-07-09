@@ -5,6 +5,13 @@ import { prisma } from "@/db/prisma";
 import { handleError } from "@/lib/utils";
 import { generateNoteTitle } from "./generate-title";
 
+type PersistedChatMessage = {
+  id: string;
+  text: string;
+  createdAt: string;
+  isAI?: boolean;
+};
+
 export async function createNoteAction(id?: string) {
   const user = await getUser();
   if (!user) return { errorMessage: "Not signed in" };
@@ -13,7 +20,7 @@ export async function createNoteAction(id?: string) {
 
   try {
     await prisma.note.create({
-      data: { id: noteId, authorId: user.id, text: "" },
+      data: { id: noteId, authorId: user.id, text: "", chatMessages: [] },
     });
     return { id: noteId };
   } catch (e) {
@@ -23,7 +30,11 @@ export async function createNoteAction(id?: string) {
 }
 
 // Idempotent: update text; if the note doesn't exist yet, create it with that text.
-export async function updateNoteAction(id: string, text: string) {
+export async function updateNoteAction(
+  id: string,
+  text: string,
+  chatMessages?: PersistedChatMessage[],
+) {
   const user = await getUser();
   if (!user) return { errorMessage: "Not signed in" };
 
@@ -57,6 +68,7 @@ export async function updateNoteAction(id: string, text: string) {
       where: { id, authorId: user.id },
       data: {
         text,
+        ...(chatMessages ? { chatMessages } : {}),
         // Don't update title here - it will be updated asynchronously
       },
     });
@@ -68,13 +80,17 @@ export async function updateNoteAction(id: string, text: string) {
           id,
           authorId: user.id,
           text,
+          chatMessages: chatMessages ?? [],
           title: null, // Title will be generated asynchronously
         },
       });
     }
 
     // Generate title in the background (non-blocking)
-    const needsTitle = !existingNote?.title && text.trim().length > 20;
+    const needsTitle =
+      !existingNote?.title &&
+      existingNote?.text !== text &&
+      text.trim().length > 20;
     if (needsTitle) {
       generateNoteTitle(text)
         .then((title) => {

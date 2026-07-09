@@ -1,6 +1,7 @@
 "use client";
 
-import { Pencil, Copy } from "lucide-react";
+import type { ReactNode } from "react";
+import { Copy, Pencil } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   Tooltip,
@@ -8,12 +9,25 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import LLMResponse from "@/components/LLMResponse";
+import ChatThinkingPanel from "@/components/ChatThinkingPanel";
+import type {
+  ChatStreamActivityLine,
+  ChatStreamStep,
+  ChatStreamTerminal,
+} from "@/lib/chat-sse-client";
 
 type BubbleProps = {
   text: string;
   timestamp?: Date | string;
   mine?: boolean;
   isLoading?: boolean;
+  streamStatusLabel?: string;
+  streamSteps?: ChatStreamStep[];
+  streamActivityLines?: ChatStreamActivityLine[];
+  streamError?: string;
+  streamTerminal?: ChatStreamTerminal;
+  streamStartedAt?: string;
+  streamEndedAt?: string;
   onCopy?: (text: string) => void;
   onEdit?: (text: string) => void;
 };
@@ -23,6 +37,13 @@ export default function MessageBubble({
   timestamp,
   mine = true,
   isLoading = false,
+  streamStatusLabel,
+  streamSteps,
+  streamActivityLines,
+  streamError,
+  streamTerminal,
+  streamStartedAt,
+  streamEndedAt,
   onCopy,
   onEdit,
 }: BubbleProps) {
@@ -40,7 +61,7 @@ export default function MessageBubble({
     };
 
     const lines = value.split("\n");
-    const nodes: React.ReactNode[] = [];
+    const nodes: ReactNode[] = [];
     lines.forEach((line, idx) => {
       nodes.push(
         <span
@@ -59,28 +80,46 @@ export default function MessageBubble({
     ? "rounded-2xl p-3 break-words whitespace-pre-wrap shadow bg-primary text-primary-foreground"
     : "w-full max-w-none p-0";
 
+  const showThinkingChrome =
+    !mine &&
+    (isLoading ||
+      Boolean(streamStatusLabel?.trim()) ||
+      Boolean(streamError?.trim()) ||
+      (streamSteps && streamSteps.length > 0) ||
+      (streamActivityLines && streamActivityLines.length > 0) ||
+      streamTerminal === "completed" ||
+      streamTerminal === "failed");
+
+  const showAnswer = Boolean(text?.trim());
+
   return (
     <div className={`flex w-full ${mine ? "justify-end" : "justify-start"}`}>
       <div
         className={`group outline-none ${mine ? "max-w-[75%]" : "w-full max-w-none"}`}
         tabIndex={0}
       >
-        {/* Bubble */}
         <div className={bubbleClass}>
-          {isLoading ? (
-            <div className="flex items-center gap-1.5 py-1">
-              <span className="h-2 w-2 rounded-full bg-current opacity-60 animate-[bounce_1.4s_ease-in-out_infinite]"></span>
-              <span className="h-2 w-2 rounded-full bg-current opacity-60 animate-[bounce_1.4s_ease-in-out_0.2s_infinite]"></span>
-              <span className="h-2 w-2 rounded-full bg-current opacity-60 animate-[bounce_1.4s_ease-in-out_0.4s_infinite]"></span>
-            </div>
+          {mine ? (
+            renderInlineText(text)
           ) : (
             <div>
-              {mine ? renderInlineText(text) : <LLMResponse content={text} />}
+              {showThinkingChrome ? (
+                <ChatThinkingPanel
+                  statusLabel={streamStatusLabel}
+                  steps={streamSteps}
+                  activityLines={streamActivityLines}
+                  streamError={streamError}
+                  streamTerminal={streamTerminal}
+                  streamStartedAt={streamStartedAt}
+                  streamEndedAt={streamEndedAt}
+                  connecting={isLoading}
+                />
+              ) : null}
+              {showAnswer ? <LLMResponse content={text} /> : null}
             </div>
           )}
         </div>
 
-        {/* Actions BELOW the bubble (hidden until hover/focus) */}
         <div className="mt-1 flex justify-end gap-1 opacity-0 transition-opacity group-focus-within:opacity-100 group-hover:opacity-100">
           <Tooltip>
             <TooltipTrigger asChild>

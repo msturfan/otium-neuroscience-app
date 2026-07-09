@@ -11,10 +11,12 @@ import {
   Landmark,
   HeartHandshake,
 } from "lucide-react";
+import { IconCalendarEventFilled } from "@tabler/icons-react";
 
 import { NavNotes } from "@/components/nav-notes";
 import { NavMain } from "@/components/nav-main";
 import { NavUser } from "@/components/nav-user";
+import { NavWorkoutProgramProfile } from "@/components/nav-workout-program-profile";
 import { TeamSwitcher } from "@/components/team-switcher";
 import { SearchCommand } from "@/components/SearchCommand";
 import {
@@ -87,6 +89,11 @@ const data = {
       icon: Edit,
     },
     {
+      title: "Workout Program",
+      url: "/workout/program",
+      icon: IconCalendarEventFilled,
+    },
+    {
       title: "Inbox",
       url: "/inbox",
       icon: Inbox,
@@ -154,7 +161,8 @@ export function AppSidebar({
           appsItems={navSecondaryFiltered}
         />
       </SidebarContent>
-      <SidebarFooter>
+      <SidebarFooter className="bg-sidebar shrink-0">
+        <NavWorkoutProgramProfile user={user} />
         <NavUser user={displayUser} isGuest={!user} />
       </SidebarFooter>
       <SidebarRail />

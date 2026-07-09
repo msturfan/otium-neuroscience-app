@@ -17,9 +17,22 @@ type Props = {
   hasProfile: boolean;
 };
 
+const WORKOUT_PROFILE_GATE_DISMISSED_KEY = "otium.workout.profileGateDismissed";
+
 export default function WorkoutGate({ children, hasProfile }: Props) {
   const router = useRouter();
   const [profileComplete, setProfileComplete] = useState(hasProfile);
+  const [profileGateDismissed, setProfileGateDismissed] = useState(false);
+
+  useEffect(() => {
+    try {
+      setProfileGateDismissed(
+        localStorage.getItem(WORKOUT_PROFILE_GATE_DISMISSED_KEY) === "1",
+      );
+    } catch {
+      setProfileGateDismissed(false);
+    }
+  }, []);
 
   useEffect(() => {
     if (hasProfile) setProfileComplete(true);
@@ -28,10 +41,9 @@ export default function WorkoutGate({ children, hasProfile }: Props) {
   const [editInitial, setEditInitial] = useState<WorkoutProgramProfile | null>(
     null,
   );
-  const prevRequestId = useRef(0);
-
   const { editProfileRequestId, setWorkoutPageProfileState } =
     useWorkoutProfileEditor();
+  const prevRequestId = useRef(editProfileRequestId);
 
   useEffect(() => {
     setWorkoutPageProfileState({
@@ -68,7 +80,17 @@ export default function WorkoutGate({ children, hasProfile }: Props) {
     setEditInitial(null);
   }, []);
 
-  const showProfileForm = !profileComplete || isEditingProfile;
+  const handleProfileFormCancelCreate = useCallback(() => {
+    setProfileGateDismissed(true);
+    try {
+      localStorage.setItem(WORKOUT_PROFILE_GATE_DISMISSED_KEY, "1");
+    } catch {
+      /* ignore */
+    }
+  }, []);
+
+  const showProfileForm =
+    isEditingProfile || (!profileComplete && !profileGateDismissed);
 
   if (showProfileForm) {
     if (profileComplete && isEditingProfile && !editInitial) {
@@ -89,7 +111,9 @@ export default function WorkoutGate({ children, hasProfile }: Props) {
         }
         onComplete={handleProfileFormComplete}
         onCancel={
-          profileComplete ? handleProfileFormCancelEdit : undefined
+          profileComplete
+            ? handleProfileFormCancelEdit
+            : handleProfileFormCancelCreate
         }
       />
     );

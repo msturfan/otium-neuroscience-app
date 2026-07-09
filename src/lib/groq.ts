@@ -2,7 +2,7 @@ import Groq from "groq-sdk";
 
 const groq = new Groq({ apiKey: process.env.GROQ_API_KEY });
 
-const DEFAULT_MODEL = "llama-3.1-8b-instant";
+const DEFAULT_MODEL = "openai/gpt-oss-120b";
 
 export async function groqChat(
   systemPrompt: string,

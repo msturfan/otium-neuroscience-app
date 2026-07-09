@@ -50,6 +50,93 @@ function extractText(node: React.ReactNode): string {
 }
 
 /* ------------------------------------------------------------------ */
+/*  Program overview table (Detail | Value) → horizontal layout      */
+/* ------------------------------------------------------------------ */
+type HastLike = {
+  type: string;
+  tagName?: string;
+  value?: string;
+  children?: HastLike[];
+};
+
+function hastPlainText(node: HastLike | undefined): string {
+  if (!node) return "";
+  if (node.type === "text" && node.value != null) return node.value;
+  if (!node.children?.length) return "";
+  return node.children.map((c) => hastPlainText(c)).join("");
+}
+
+function normalizeOverviewCell(s: string): string {
+  return s.replace(/\s+/g, " ").trim();
+}
+
+/** Markdown program overview uses | Detail | Value | — detect and parse for custom layout. */
+function parseProgramOverviewPairs(node: HastLike | undefined): { label: string; value: string }[] | null {
+  if (!node || node.type !== "element" || node.tagName !== "table" || !node.children?.length) {
+    return null;
+  }
+
+  const thead = node.children.find((c) => c.type === "element" && c.tagName === "thead");
+  const tbody = node.children.find((c) => c.type === "element" && c.tagName === "tbody");
+  if (!thead?.children?.length || !tbody?.children?.length) return null;
+
+  const headerRow = thead.children.find((c) => c.type === "element" && c.tagName === "tr");
+  if (!headerRow?.children?.length) return null;
+
+  const thEls = headerRow.children.filter((c) => c.type === "element" && c.tagName === "th");
+  if (thEls.length !== 2) return null;
+
+  const h0 = normalizeOverviewCell(hastPlainText(thEls[0]));
+  const h1 = normalizeOverviewCell(hastPlainText(thEls[1]));
+  if (!/^detail$/i.test(h0) || !/^value$/i.test(h1)) return null;
+
+  const rowEls = tbody.children.filter((c) => c.type === "element" && c.tagName === "tr");
+  const pairs: { label: string; value: string }[] = [];
+
+  for (const tr of rowEls) {
+    const cells = tr.children?.filter(
+      (c) => c.type === "element" && (c.tagName === "td" || c.tagName === "th"),
+    );
+    if (!cells || cells.length !== 2) return null;
+    const label = normalizeOverviewCell(hastPlainText(cells[0]));
+    const value = normalizeOverviewCell(hastPlainText(cells[1]));
+    pairs.push({ label, value });
+  }
+
+  return pairs.length > 0 ? pairs : null;
+}
+
+function ProgramOverviewTable({ pairs }: { pairs: { label: string; value: string }[] }) {
+  return (
+    <div
+      className="program-overview-table my-4 overflow-x-hidden rounded-lg border border-gray-200 dark:border-gray-700"
+      role="region"
+      aria-label="Program overview"
+    >
+      <div className="grid min-w-0 grid-cols-2 gap-3 p-3 md:grid-cols-3 xl:grid-cols-6">
+        {pairs.map((pair, i) => (
+          <div
+            key={pair.label}
+            className={
+              i % 2 === 1
+                ? "flex min-w-0 flex-col gap-1.5 rounded-md border border-gray-200/80 bg-gray-50/50 px-3 py-2.5 dark:border-gray-700 dark:bg-gray-800/40 md:px-4 md:py-3"
+                : "flex min-w-0 flex-col gap-1.5 rounded-md border border-gray-200/80 px-3 py-2.5 dark:border-gray-700 md:px-4 md:py-3"
+            }
+          >
+            <div className="text-[0.7rem] font-semibold uppercase leading-snug tracking-wider text-gray-600 dark:text-gray-400 md:text-xs">
+              {pair.label}
+            </div>
+            <div className="break-words text-sm text-gray-800 dark:text-gray-200">
+              {pair.value}
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+/* ------------------------------------------------------------------ */
 /*  Custom components for react-markdown                               */
 /* ------------------------------------------------------------------ */
 const markdownComponents: Components = {
@@ -138,11 +225,17 @@ const markdownComponents: Components = {
     ) : null,
 
   /* ---------- Tables ---------- */
-  table: ({ children }) => (
-    <div className="my-4 overflow-x-auto rounded-lg border border-gray-200 dark:border-gray-700">
-      <table className="w-full border-collapse text-sm">{children}</table>
-    </div>
-  ),
+  table: ({ node, children }) => {
+    const pairs = parseProgramOverviewPairs(node as HastLike | undefined);
+    if (pairs) {
+      return <ProgramOverviewTable pairs={pairs} />;
+    }
+    return (
+      <div className="my-4 overflow-x-auto rounded-lg border border-gray-200 dark:border-gray-700">
+        <table className="w-full border-collapse text-sm">{children}</table>
+      </div>
+    );
+  },
   thead: ({ children }) => (
     <thead className="bg-gray-50 dark:bg-gray-800/60">{children}</thead>
   ),
@@ -224,7 +317,9 @@ type LLMResponseProps = {
 
 export default function LLMResponse({ content }: LLMResponseProps) {
   return (
-    <div className="llm-response space-y-1">
+    <div
+      className="llm-response space-y-1 [&_.program-overview-table+h3]:mt-8 [&_.program-overview-table+h3]:border-t [&_.program-overview-table+h3]:border-gray-200 [&_.program-overview-table+h3]:pt-8 dark:[&_.program-overview-table+h3]:border-gray-700"
+    >
       <ReactMarkdown
         remarkPlugins={[remarkGfm]}
         rehypePlugins={[rehypeHighlight]}

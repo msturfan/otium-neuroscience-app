@@ -29,6 +29,7 @@ import {
 type Props = {
   noteId: string;
   startingNoteText: string;
+  startingChatMessages?: NoteLike[];
   user: User | null;
   feedNotes?: NoteLike[];
   greeting?: string;
@@ -38,6 +39,7 @@ type Props = {
 export default function NoteTextInput({
   noteId,
   startingNoteText,
+  startingChatMessages = [],
   user,
   feedNotes = [],
   greeting = "What's on your mind?",
@@ -78,12 +80,15 @@ export default function NoteTextInput({
 
   // Store local conversation messages for this note.
   const [aiGreetings, setAiGreetings] = useState<NoteLike[]>([]);
+  const authScope = user?.id ?? "guest";
+  const chatStorageKey = `ai-greetings-${authScope}-${noteId}`;
 
   // Track the current noteId to detect when it changes
   const [currentNoteId, setCurrentNoteId] = useState(noteId);
   const [isGeneratingGreeting, setIsGeneratingGreeting] = useState(false);
   const activeGreetingRequestIdRef = useRef<string | null>(null);
   const activeLoadingBubbleIdRef = useRef<string | null>(null);
+  const previousAuthScopeRef = useRef(authScope);
 
   // Streaming state for follow-up messages
   const [isStreaming, setIsStreaming] = useState(false);
@@ -118,16 +123,76 @@ export default function NoteTextInput({
         );
         if (messagesToSave.length > 0) {
           const serialized = JSON.stringify(messagesToSave);
-          sessionStorage.setItem(`ai-greetings-${noteId}`, serialized);
+          sessionStorage.setItem(chatStorageKey, serialized);
         }
       } catch (error) {
         console.error("Failed to save AI greetings to sessionStorage:", error);
       }
     }
-  }, [aiGreetings, noteId, currentNoteId]);
+  }, [aiGreetings, chatStorageKey, currentNoteId, noteId]);
+
+  // Persist full chat history to DB for authenticated users
+  useEffect(() => {
+    if (
+      !user ||
+      isStreaming ||
+      isGeneratingGreeting ||
+      currentNoteId !== noteId ||
+      aiGreetings.length === 0
+    ) {
+      return;
+    }
+
+    const messagesToPersist = aiGreetings
+      .filter((m) => !m.isLoading && m.text?.trim())
+      .map((m) => ({
+        id: m.id,
+        text: m.text.trim(),
+        createdAt: new Date(m.createdAt).toISOString(),
+        isAI: m.isAI === true,
+      }));
+
+    if (messagesToPersist.length === 0) return;
+
+    const firstUserMessage =
+      messagesToPersist.find((m) => !m.isAI)?.text ?? startingNoteText.trim();
+
+    if (!firstUserMessage) return;
+
+    const timeout = setTimeout(() => {
+      void updateNoteAction(noteId, firstUserMessage, messagesToPersist);
+    }, 500);
+
+    return () => clearTimeout(timeout);
+  }, [
+    user,
+    isStreaming,
+    isGeneratingGreeting,
+    currentNoteId,
+    noteId,
+    aiGreetings,
+    startingNoteText,
+  ]);
 
   // Handle noteId changes and load appropriate greetings
   useEffect(() => {
+    if (previousAuthScopeRef.current !== authScope) {
+      previousAuthScopeRef.current = authScope;
+      setAiGreetings([]);
+      setIsEditing(false);
+      setHasTyped(false);
+      setIsGeneratingGreeting(false);
+      activeGreetingRequestIdRef.current = null;
+      activeLoadingBubbleIdRef.current = null;
+
+      if (abortControllerRef.current) {
+        abortControllerRef.current.abort();
+        abortControllerRef.current = null;
+      }
+      setIsStreaming(false);
+      streamingMessageIdRef.current = null;
+    }
+
     // Check if we've switched to a different note
     if (currentNoteId !== noteId) {
       // Clear current greetings when switching notes
@@ -150,41 +215,58 @@ export default function NoteTextInput({
       // Load messages for the new note from sessionStorage
       if (typeof window !== "undefined") {
         try {
-          const stored = sessionStorage.getItem(`ai-greetings-${noteId}`);
+          const stored = sessionStorage.getItem(chatStorageKey);
           if (stored) {
             const parsed = JSON.parse(stored);
             if (parsed.length > 0) {
               setAiGreetings(parsed);
             }
+          } else if (startingChatMessages.length > 0) {
+            setAiGreetings(startingChatMessages);
           }
         } catch (error) {
           console.error(
             "Failed to reload AI greetings from sessionStorage:",
             error,
           );
+          if (startingChatMessages.length > 0) {
+            setAiGreetings(startingChatMessages);
+          }
         }
       }
     } else if (typeof window !== "undefined") {
       // Same note - load messages if not already loaded
       if (aiGreetings.length === 0) {
         try {
-          const stored = sessionStorage.getItem(`ai-greetings-${noteId}`);
+          const stored = sessionStorage.getItem(chatStorageKey);
           if (stored) {
             const parsed = JSON.parse(stored);
             if (parsed.length > 0) {
               setAiGreetings(parsed);
             }
+          } else if (startingChatMessages.length > 0) {
+            setAiGreetings(startingChatMessages);
           }
         } catch (error) {
           console.error(
             "Failed to reload AI greetings from sessionStorage:",
             error,
           );
+          if (startingChatMessages.length > 0) {
+            setAiGreetings(startingChatMessages);
+          }
         }
       }
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [noteId, hasUserNoteContent, currentNoteId]);
+  }, [
+    authScope,
+    chatStorageKey,
+    currentNoteId,
+    hasUserNoteContent,
+    noteId,
+    startingChatMessages,
+  ]);
 
   // Combine persisted user note + local AI/user transient messages, sorted by creation time.
   // Avoid showing the same user note twice once we have a local optimistic user bubble.

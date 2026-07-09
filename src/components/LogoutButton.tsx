@@ -4,13 +4,31 @@ import { Loader2 } from "lucide-react";
 import { Button } from "./ui/button";
 import { useState } from "react";
 import { toast } from "sonner";
-import { useRouter } from "next/navigation";
 import { logOutAction } from "@/actions/users";
 
 function LogOutButton() {
-  const router = useRouter();
-
   const [loading, setLoading] = useState(false);
+
+  const clearLocalConversationCache = () => {
+    if (typeof window === "undefined") return;
+
+    try {
+      const removablePrefixes = [
+        "ai-greetings-",
+        "chat-neuro-",
+        "chat-workout-",
+      ];
+      for (let i = sessionStorage.length - 1; i >= 0; i -= 1) {
+        const key = sessionStorage.key(i);
+        if (!key) continue;
+        if (removablePrefixes.some((prefix) => key.startsWith(prefix))) {
+          sessionStorage.removeItem(key);
+        }
+      }
+    } catch {
+      // Ignore storage failures.
+    }
+  };
 
   const handleLogOut = async () => {
     setLoading(true);
@@ -18,14 +36,14 @@ function LogOutButton() {
     const { errorMessage } = await logOutAction();
 
     if (!errorMessage) {
-      router.push(`/?toastType=logOut`);
+      clearLocalConversationCache();
+      window.location.assign("/?toastType=logOut");
     } else {
       toast("Error", {
         description: errorMessage,
       });
+      setLoading(false);
     }
-
-    setLoading(false);
   };
 
   return (

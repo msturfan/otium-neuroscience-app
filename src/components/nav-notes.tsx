@@ -4,7 +4,6 @@ import { useEffect, useMemo, useState } from "react";
 import { useRouter, useSearchParams, usePathname } from "next/navigation";
 import {
   ChevronRight,
-  ClipboardList,
   Copy,
   Loader2,
   Pin,
@@ -47,7 +46,6 @@ import {
   NOTE_DELETED_EVENT,
   NOTE_PERSISTED_EVENT,
 } from "@/components/nav-actions";
-import { useWorkoutProfileEditor } from "@/providers/WorkoutProfileEditorProvider";
 
 type UserNote = {
   id: string;
@@ -66,8 +64,6 @@ type Props = {
 const SIDEBAR_NOTES_EXPANDED_KEY = "otium.sidebar.myNotesExpanded";
 const SIDEBAR_NEUROSCIENCE_EXPANDED_KEY = "otium.sidebar.neuroscienceExpanded";
 const SIDEBAR_WORKOUT_EXPANDED_KEY = "otium.sidebar.workoutExpanded";
-const SIDEBAR_WORKOUT_PROFILE_EXPANDED_KEY =
-  "otium.sidebar.workoutProfileExpanded";
 const SIDEBAR_APPS_EXPANDED_KEY_OTIUM = "otium.sidebar.appsExpanded.otium";
 const SIDEBAR_APPS_EXPANDED_KEY_NEUROSCIENCE =
   "otium.sidebar.appsExpanded.neuroscience";
@@ -103,8 +99,6 @@ export function NavNotes({ user, onKnownNoteIdsChange, appsItems }: Props) {
 
   const [sectionOpen, setSectionOpen] = useState(true);
   const [appsSectionOpen, setAppsSectionOpen] = useState(false);
-  const [workoutProfileSectionOpen, setWorkoutProfileSectionOpen] =
-    useState(true);
   const [userNotes, setUserNotes] = useState<UserNote[]>([]);
   const [loading, setLoading] = useState(true);
   const { guestNotes, deleteGuestNote } = useNote();
@@ -117,16 +111,6 @@ export function NavNotes({ user, onKnownNoteIdsChange, appsItems }: Props) {
       setSectionOpen(true);
     }
   }, [expandedStorageKey]);
-
-  useEffect(() => {
-    if (!isWorkout) return;
-    try {
-      const stored = localStorage.getItem(SIDEBAR_WORKOUT_PROFILE_EXPANDED_KEY);
-      setWorkoutProfileSectionOpen(stored === null ? true : stored === "true");
-    } catch {
-      setWorkoutProfileSectionOpen(true);
-    }
-  }, [isWorkout]);
 
   useEffect(() => {
     try {
@@ -150,15 +134,6 @@ export function NavNotes({ user, onKnownNoteIdsChange, appsItems }: Props) {
     setSectionOpen(open);
     try {
       localStorage.setItem(expandedStorageKey, String(open));
-    } catch {
-      /* ignore */
-    }
-  };
-
-  const handleWorkoutProfileSectionOpenChange = (open: boolean) => {
-    setWorkoutProfileSectionOpen(open);
-    try {
-      localStorage.setItem(SIDEBAR_WORKOUT_PROFILE_EXPANDED_KEY, String(open));
     } catch {
       /* ignore */
     }
@@ -264,12 +239,6 @@ export function NavNotes({ user, onKnownNoteIdsChange, appsItems }: Props) {
 
   const { pinnedIds } = usePinnedChats(pinnedContext);
 
-  const { requestEditProfile, workoutPageHasProfile, onWorkoutPage } =
-    useWorkoutProfileEditor();
-
-  const showWorkoutProfileEntry =
-    isWorkout && user && onWorkoutPage && workoutPageHasProfile;
-
   useEffect(() => {
     if (!onKnownNoteIdsChange) return;
     if (loading) {
@@ -298,10 +267,6 @@ export function NavNotes({ user, onKnownNoteIdsChange, appsItems }: Props) {
   const toggleAriaLabel = sectionOpen
     ? `Hide ${sectionTitle}`
     : `Show ${sectionTitle}`;
-
-  const workoutProfileToggleAriaLabel = workoutProfileSectionOpen
-    ? "Hide Workout profile"
-    : "Show Workout profile";
 
   const appsToggleAriaLabel = appsSectionOpen ? "Hide apps" : "Show apps";
 
@@ -357,47 +322,6 @@ export function NavNotes({ user, onKnownNoteIdsChange, appsItems }: Props) {
                     </SidebarMenuButton>
                   </SidebarMenuItem>
                 ))}
-              </SidebarMenu>
-            </SidebarGroupContent>
-          </CollapsibleContent>
-        </Collapsible>
-      ) : null}
-      {showWorkoutProfileEntry ? (
-        <Collapsible
-          open={workoutProfileSectionOpen}
-          onOpenChange={handleWorkoutProfileSectionOpenChange}
-        >
-          <SidebarGroupLabel asChild>
-            <CollapsibleTrigger
-              type="button"
-              aria-expanded={workoutProfileSectionOpen}
-              aria-label={workoutProfileToggleAriaLabel}
-              className={cn(
-                "hover:bg-sidebar-accent/60 hover:text-sidebar-accent-foreground w-full cursor-pointer gap-2 pr-2 text-left",
-              )}
-            >
-              <ChevronRight
-                className={cn(
-                  "shrink-0 transition-transform duration-200",
-                  workoutProfileSectionOpen && "rotate-90",
-                )}
-                aria-hidden
-              />
-              <span className="min-w-0 flex-1 truncate">Workout profile</span>
-            </CollapsibleTrigger>
-          </SidebarGroupLabel>
-          <CollapsibleContent>
-            <SidebarGroupContent>
-              <SidebarMenu>
-                <SidebarMenuItem>
-                  <SidebarMenuButton
-                    type="button"
-                    onClick={requestEditProfile}
-                  >
-                    <ClipboardList />
-                    <span>Program profile</span>
-                  </SidebarMenuButton>
-                </SidebarMenuItem>
               </SidebarMenu>
             </SidebarGroupContent>
           </CollapsibleContent>
