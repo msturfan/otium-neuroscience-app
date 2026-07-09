@@ -214,7 +214,6 @@ export default function WorkoutTextInput({
     if (previousAuthScopeRef.current !== authScope) {
       previousAuthScopeRef.current = authScope;
       setChatMessages([]);
-      setIsEditing(false);
       setHasTyped(false);
 
       if (abortControllerRef.current) {
