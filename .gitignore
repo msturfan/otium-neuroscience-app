@@ -50,3 +50,12 @@ src/data/*
 neuroplasticity-notes.md
 
 .cursor
+# OpenNext
+.open-next
+
+# wrangler files
+.wrangler
+.dev.vars*
+!.dev.vars.example
+
+!.env.example
