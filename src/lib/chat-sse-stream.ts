@@ -113,11 +113,14 @@ export function createGroqChatSseStream(
       } catch (err) {
         const aborted =
           err instanceof DOMException && err.name === "AbortError";
-        const message =
-          err instanceof Error ? err.message : "Stream error";
+        if (!aborted) {
+          console.error("[Groq SSE]", err);
+        }
         terminal("run_failed", {
           code: aborted ? "aborted" : "error",
-          message: aborted ? "Request aborted" : message,
+          message: aborted
+            ? "Request aborted"
+            : "AI request failed. Please try again.",
         });
       }
     },

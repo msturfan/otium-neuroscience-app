@@ -1,8 +1,19 @@
 import Groq from "groq-sdk";
 
-const groq = new Groq({ apiKey: process.env.GROQ_API_KEY });
-
 const DEFAULT_MODEL = "openai/gpt-oss-120b";
+
+let groqClient: Groq | null = null;
+
+function getGroqClient(): Groq {
+  const apiKey = process.env.GROQ_API_KEY;
+  if (!apiKey) {
+    console.error("[Groq] GROQ_API_KEY is not configured");
+    throw new Error("AI service is not configured");
+  }
+
+  groqClient ??= new Groq({ apiKey });
+  return groqClient;
+}
 
 export async function groqChat(
   systemPrompt: string,
@@ -20,7 +31,7 @@ export async function groqChat(
     { role: "user", content: userMessage },
   ];
 
-  const completion = await groq.chat.completions.create({
+  const completion = await getGroqClient().chat.completions.create({
     model,
     messages,
   });
@@ -50,7 +61,7 @@ export async function groqChatStream(
     })),
   ];
 
-  const stream = await groq.chat.completions.create({
+  const stream = await getGroqClient().chat.completions.create({
     model,
     messages: groqMessages,
     stream: true,

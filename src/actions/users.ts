@@ -314,10 +314,12 @@ export const signUpAction = async (
       where: { email },
     });
 
-    if (existingUser) {
-      // User already exists - don't send signup email
-      // Return success without revealing user exists (prevent email enumeration)
-      console.log("User already exists, skipping signup email");
+      if (existingUser) {
+        // User already exists - don't send signup email
+        // Return success without revealing user exists (prevent email enumeration)
+        if (process.env.NODE_ENV === "development") {
+          console.log("User already exists, skipping signup email");
+        }
 
       // Clear rate limit (treat as success for rate limiting purposes)
       await clearRateLimitDual(email, "signup");
@@ -358,9 +360,11 @@ export const signUpAction = async (
       if (isUserExistsError) {
         // User exists in Supabase but not in our DB - don't send email
         // Return success without revealing user exists
-        console.log(
-          "User already exists in Supabase auth, skipping signup email",
-        );
+        if (process.env.NODE_ENV === "development") {
+          console.log(
+            "User already exists in Supabase auth, skipping signup email",
+          );
+        }
 
         // Clear rate limit (treat as success)
         await clearRateLimitDual(email, "signup");

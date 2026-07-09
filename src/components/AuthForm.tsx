@@ -35,7 +35,6 @@ function AuthForm({ type, className, ...props }: Props) {
   const [captchaToken, setCaptchaToken] = useState<string | null>(null);
 
   const handleCaptchaVerify = useCallback((token: string) => {
-    console.log("✅ CAPTCHA verified, token received");
     setCaptchaToken(token);
   }, []);
 
@@ -134,15 +133,7 @@ function AuthForm({ type, className, ...props }: Props) {
             captchaToken || undefined,
           );
 
-          // Update CAPTCHA requirement based on server response
-          console.log("Login result:", {
-            requiresCaptcha: result?.requiresCaptcha,
-            errorMessage: result?.errorMessage,
-            tokenWasSent: !!captchaToken,
-          });
-
           if (result?.requiresCaptcha) {
-            console.log("✅ CAPTCHA required - showing widget");
             setRequiresCaptcha(true);
             // Only reset token if there was an error
             if (result?.errorMessage) {
